@@ -3,8 +3,9 @@ Pytest configuration and fixtures for SQL Batcher tests.
 """
 
 import os
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 
 # Define test markers

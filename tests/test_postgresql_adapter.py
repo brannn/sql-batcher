@@ -5,7 +5,7 @@ Unit tests for the PostgreSQL adapter.
 import pytest
 
 pytest.importorskip("psycopg2")
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 # Mark all tests in this file as using postgres-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.postgres]
