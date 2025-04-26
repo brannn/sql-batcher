@@ -1,9 +1,11 @@
 """
 Pytest configuration and fixtures for SQL Batcher tests.
 """
+
 import os
 import pytest
 from unittest.mock import MagicMock
+
 
 # Define test markers
 def pytest_configure(config):
@@ -39,10 +41,11 @@ def has_postgres_connection():
     for var in required_vars:
         if not os.environ.get(var):
             return False
-            
+
     # Try to connect to PostgreSQL
     try:
         import psycopg2
+
         conn_params = {
             "host": os.environ.get("PGHOST", "localhost"),
             "port": os.environ.get("PGPORT", "5432"),
@@ -51,7 +54,7 @@ def has_postgres_connection():
             "password": os.environ.get("PGPASSWORD", ""),
             "connect_timeout": 5,
         }
-        
+
         conn = psycopg2.connect(**conn_params)
         conn.close()
         return True
@@ -63,14 +66,20 @@ def has_postgres_connection():
 def has_snowflake_connection():
     """Check if Snowflake connection is available."""
     # Check for required environment variables
-    required_vars = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD", "SNOWFLAKE_DATABASE"]
+    required_vars = [
+        "SNOWFLAKE_ACCOUNT",
+        "SNOWFLAKE_USER",
+        "SNOWFLAKE_PASSWORD",
+        "SNOWFLAKE_DATABASE",
+    ]
     for var in required_vars:
         if not os.environ.get(var):
             return False
-    
+
     # Check for snowflake-connector-python package
     try:
         import snowflake.connector
+
         return True
     except ImportError:
         return False
@@ -83,10 +92,11 @@ def has_trino_connection():
     for var in required_vars:
         if not os.environ.get(var):
             return False
-    
+
     # Check for trino package
     try:
         import trino
+
         return True
     except ImportError:
         return False
@@ -97,10 +107,11 @@ def has_bigquery_connection():
     # Check for required environment variables
     if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
         return False
-    
+
     # Check for google-cloud-bigquery package
     try:
         from google.cloud import bigquery
+
         return True
     except ImportError:
         return False
@@ -111,6 +122,7 @@ def has_spark_connection():
     # Check for pyspark package
     try:
         import pyspark
+
         return True
     except ImportError:
         return False
@@ -124,7 +136,7 @@ def pytest_collection_modifyitems(config, items):
     skip_trino = pytest.mark.skip(reason="Trino connection not available")
     skip_bigquery = pytest.mark.skip(reason="BigQuery connection not available")
     skip_spark = pytest.mark.skip(reason="Spark connection not available")
-    
+
     for item in items:
         # Skip tests based on database connection availability
         if "postgres" in item.keywords and not has_postgres_connection():
@@ -146,7 +158,7 @@ def mock_db_connection():
     conn = MagicMock()
     cursor = MagicMock()
     conn.cursor.return_value = cursor
-    
+
     # Mock cursor.execute to return result sets for SELECT statements
     def side_effect(sql, *args, **kwargs):
         if sql.strip().upper().startswith("SELECT"):
@@ -154,12 +166,12 @@ def mock_db_connection():
             cursor.rowcount = 1
             cursor.fetchall.return_value = [(1, "Test")]
         return cursor
-    
+
     cursor.execute.side_effect = side_effect
-    
+
     # Configure transaction methods
     conn.commit = MagicMock()
     conn.rollback = MagicMock()
     conn.close = MagicMock()
-    
+
     return conn

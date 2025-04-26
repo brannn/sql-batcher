@@ -14,6 +14,7 @@ __all__ = ["SQLAdapter", "GenericAdapter"]
 # Trino adapter is lazily imported to avoid hard dependency
 try:
     from sql_batcher.adapters.trino import TrinoAdapter
+
     __all__.append("TrinoAdapter")
 except ImportError:
     pass
@@ -21,6 +22,7 @@ except ImportError:
 # Snowflake adapter is lazily imported to avoid hard dependency
 try:
     from sql_batcher.adapters.snowflake import SnowflakeAdapter
+
     __all__.append("SnowflakeAdapter")
 except ImportError:
     pass
@@ -28,6 +30,7 @@ except ImportError:
 # Spark adapter is lazily imported to avoid hard dependency
 try:
     from sql_batcher.adapters.spark import SparkAdapter
+
     __all__.append("SparkAdapter")
 except ImportError:
     pass
@@ -35,6 +38,7 @@ except ImportError:
 # BigQuery adapter is lazily imported to avoid hard dependency
 try:
     from sql_batcher.adapters.bigquery import BigQueryAdapter
+
     __all__.append("BigQueryAdapter")
 except ImportError:
     pass
@@ -42,6 +46,7 @@ except ImportError:
 # PostgreSQL adapter is lazily imported to avoid hard dependency
 try:
     from sql_batcher.adapters.postgresql import PostgreSQLAdapter
+
     __all__.append("PostgreSQLAdapter")
 except ImportError:
     pass

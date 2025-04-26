@@ -8,7 +8,7 @@ have query size or memory constraints.
 
 Examples:
     Basic usage:
-    
+
     >>> from sql_batcher import SQLBatcher
     >>> batcher = SQLBatcher(max_bytes=1000000)
     >>> statements = [
