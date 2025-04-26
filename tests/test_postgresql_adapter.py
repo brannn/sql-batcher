@@ -2,6 +2,7 @@
 Unit tests for the PostgreSQL adapter.
 """
 import pytest
+pytest.importorskip("psycopg2")
 from unittest.mock import Mock, patch, MagicMock
 
 # Mark all tests in this file as using postgres-specific functionality
@@ -32,7 +33,6 @@ class TestPostgreSQLAdapter:
         mock_psycopg2.connect.return_value = self.mock_connection
         
         # Set up the mocks before instantiating the adapter
-        monkeypatch.setattr('sql_batcher.adapters.postgresql._has_psycopg2', True)
         monkeypatch.setattr('sql_batcher.adapters.postgresql.psycopg2', mock_psycopg2)
         
         # Create connection params
