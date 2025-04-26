@@ -1,4 +1,3 @@
-
 import pytest
 
 from sql_batcher.adapters.base import SQLAdapter
