@@ -1,9 +1,3 @@
-"""
-Unit tests for SQL Batcher adapters.
-"""
-
-import sqlite3
-from unittest import mock
 
 import pytest
 

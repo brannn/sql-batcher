@@ -6,7 +6,7 @@ highly scalable, enterprise data warehouse solution.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

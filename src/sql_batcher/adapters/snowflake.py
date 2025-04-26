@@ -7,7 +7,7 @@ handling the specific requirements and limitations of Snowflake.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

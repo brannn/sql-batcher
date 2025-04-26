@@ -5,7 +5,7 @@ This module provides a generic adapter that can work with any database connectio
 that follows the DB-API 2.0 specification (e.g., sqlite3, psycopg2, etc.).
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

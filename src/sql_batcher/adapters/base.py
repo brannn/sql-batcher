@@ -5,7 +5,7 @@ This module provides abstract base classes for database adapters used by SQL Bat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional
 
 
 class SQLAdapter(ABC):
@@ -28,7 +28,6 @@ class SQLAdapter(ABC):
         Returns:
             List of result rows
         """
-        pass
 
     @abstractmethod
     def get_max_query_size(self) -> int:
@@ -38,12 +37,10 @@ class SQLAdapter(ABC):
         Returns:
             Maximum query size in bytes
         """
-        pass
 
     @abstractmethod
     def close(self) -> None:
         """Close the database connection."""
-        pass
 
     def begin_transaction(self) -> None:
         """
@@ -52,7 +49,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     def commit_transaction(self) -> None:
         """
@@ -61,7 +57,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     def rollback_transaction(self) -> None:
         """
@@ -70,7 +65,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
 
 class GenericAdapter(SQLAdapter):

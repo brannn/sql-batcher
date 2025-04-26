@@ -1,6 +1,3 @@
-"""
-Unit tests for SQL Batcher core functionality.
-"""
 
 from unittest import mock
 

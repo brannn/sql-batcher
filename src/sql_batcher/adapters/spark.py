@@ -6,7 +6,7 @@ allowing SQL Batcher to work with Spark's SQL engine.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from sql_batcher.adapters.base import SQLAdapter
 
@@ -69,7 +69,6 @@ class SparkAdapter(SQLAdapter):
             fetch_limit: Maximum number of rows to fetch (default: None)
         """
         try:
-            import pyspark
             from pyspark.sql import SparkSession
 
             if not isinstance(spark_session, SparkSession):
@@ -160,7 +159,6 @@ class SparkAdapter(SQLAdapter):
         """
         logger.debug("Cleaning up Spark adapter resources")
         # No actual cleanup needed for Spark adapter
-        pass
 
     def begin_transaction(self) -> None:
         """

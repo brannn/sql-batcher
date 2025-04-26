@@ -1,8 +1,5 @@
-"""
-Unit tests for the Trino adapter.
-"""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

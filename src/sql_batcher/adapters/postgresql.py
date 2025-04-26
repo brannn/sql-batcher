@@ -7,7 +7,6 @@ optimizations for PostgreSQL features like COPY commands and transaction managem
 
 import csv
 import io
-import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from sql_batcher.adapters.base import SQLAdapter

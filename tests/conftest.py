@@ -1,6 +1,3 @@
-"""
-Pytest configuration and fixtures for SQL Batcher tests.
-"""
 
 import os
 from unittest.mock import MagicMock
@@ -79,7 +76,7 @@ def has_snowflake_connection():
 
     # Check for snowflake-connector-python package
     try:
-        import snowflake.connector
+        pass
 
         return True
     except ImportError:
@@ -96,7 +93,7 @@ def has_trino_connection():
 
     # Check for trino package
     try:
-        import trino
+        pass
 
         return True
     except ImportError:
@@ -111,7 +108,7 @@ def has_bigquery_connection():
 
     # Check for google-cloud-bigquery package
     try:
-        from google.cloud import bigquery
+        pass
 
         return True
     except ImportError:
@@ -122,7 +119,7 @@ def has_spark_connection():
     """Check if Spark connection is available."""
     # Check for pyspark package
     try:
-        import pyspark
+        pass
 
         return True
     except ImportError:
