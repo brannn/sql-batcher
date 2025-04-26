@@ -2,8 +2,9 @@
 Unit tests for the Trino adapter.
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 # Mark all tests in this file as using trino-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.trino]

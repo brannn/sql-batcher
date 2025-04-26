@@ -2,8 +2,9 @@
 Unit tests for SQL Batcher core functionality.
 """
 
-import pytest
 from unittest import mock
+
+import pytest
 
 from sql_batcher.batcher import SQLBatcher
 from sql_batcher.query_collector import ListQueryCollector

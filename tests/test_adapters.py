@@ -2,9 +2,10 @@
 Unit tests for SQL Batcher adapters.
 """
 
-import pytest
 import sqlite3
 from unittest import mock
+
+import pytest
 
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter

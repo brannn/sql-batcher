@@ -5,16 +5,16 @@ This module provides an adapter for Google BigQuery, Google's serverless,
 highly scalable, enterprise data warehouse solution.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
 import logging
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from sql_batcher.adapters.base import SQLAdapter
 
 # Optional imports to avoid hard dependency on Google Cloud libraries
 try:
+    from google.api_core.exceptions import ClientError
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
-    from google.api_core.exceptions import ClientError
 
     _has_bigquery = True
 except ImportError:
