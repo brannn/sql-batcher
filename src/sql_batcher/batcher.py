@@ -204,7 +204,7 @@ class SQLBatcher:
         execute_callback: Callable[[str], Any],
         query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> List[Any]:
+    ) -> int:
         """
         Flush the current batch of statements.
 
@@ -214,14 +214,14 @@ class SQLBatcher:
             metadata: Optional metadata to associate with the batch
 
         Returns:
-            List of results from executed statements
+            Number of statements flushed
         """
         # Get the current batch count
         count = len(self._collector.get_batch())
 
-        # If batch is empty, return empty list
+        # If batch is empty, return 0
         if count == 0:
-            return []
+            return 0
 
         # Join statements
         batch_sql = "\n".join(self._collector.get_batch())
@@ -230,10 +230,10 @@ class SQLBatcher:
         if self._collector.is_dry_run():
             if query_collector:
                 query_collector.collect(batch_sql)
-            return []
+            return 0
         else:
             # Execute the batch
-            result = execute_callback(batch_sql)
+            execute_callback(batch_sql)
 
             # Optionally collect the query
             if query_collector:
@@ -247,7 +247,7 @@ class SQLBatcher:
             self.current_size = self._collector.get_current_size()
 
             # Return the count
-            return [count]
+            return count
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:
         """
@@ -283,7 +283,7 @@ class SQLBatcher:
         execute_callback: Callable[[str], Any],
         query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> List[Any]:
+    ) -> int:
         """
         Process a list of SQL statements.
 
@@ -294,7 +294,7 @@ class SQLBatcher:
             metadata: Optional metadata to associate with the batch
 
         Returns:
-            List of results from executed statements
+            Number of statements processed
         """
         results: List[Any] = []
         for statement in statements:
@@ -305,8 +305,8 @@ class SQLBatcher:
                     query_collector.collect(statement)
                 else:
                     self._collector.collect(statement)
-                results.extend(
-                    self.flush(execute_callback, query_collector, metadata) or []
+                results.append(
+                    self.flush(execute_callback, query_collector, metadata)
                 )
 
         # Flush any remaining statements
@@ -315,12 +315,12 @@ class SQLBatcher:
                 query_collector.collect(statement)
             else:
                 self._collector.collect(statement)
-            results.extend(
-                self.flush(execute_callback, query_collector, metadata) or []
+            results.append(
+                self.flush(execute_callback, query_collector, metadata)
             )
 
         # Return the total count
-        return [len(statements)]
+        return len(statements)
 
     def process_batch(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
