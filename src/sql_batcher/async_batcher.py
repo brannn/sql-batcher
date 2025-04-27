@@ -31,6 +31,7 @@ class SavepointContext:
 
     async def __aenter__(self) -> None:
         """Enter the savepoint context."""
+        self.batcher._in_savepoint_context = True
         await self.batcher._adapter.create_savepoint(self.name)
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -41,10 +42,13 @@ class SavepointContext:
             exc_val: Exception value if an exception occurred
             exc_tb: Exception traceback if an exception occurred
         """
-        if exc_type is not None:
-            await self.batcher._adapter.rollback_to_savepoint(self.name)
-        else:
-            await self.batcher._adapter.release_savepoint(self.name)
+        try:
+            if exc_type is not None:
+                await self.batcher._adapter.rollback_to_savepoint(self.name)
+            else:
+                await self.batcher._adapter.release_savepoint(self.name)
+        finally:
+            delattr(self.batcher, '_in_savepoint_context')
 
 
 class AsyncSQLBatcher:
@@ -273,9 +277,10 @@ class AsyncSQLBatcher:
         if not self.current_batch:
             return []
 
-        # Create a savepoint for this batch
+        # Only create a savepoint if we're not already in a savepoint context
         savepoint_name = f"batch_{id(self)}"
-        await self._adapter.create_savepoint(savepoint_name)
+        if not hasattr(self, '_in_savepoint_context'):
+            await self._adapter.create_savepoint(savepoint_name)
 
         try:
             # Execute each statement in the batch
@@ -285,26 +290,29 @@ class AsyncSQLBatcher:
                     await execute_callback(statement)
                     processed_statements.append(statement)
                 except Exception as e:
-                    # Rollback to the savepoint
-                    await self._adapter.rollback_to_savepoint(savepoint_name)
-                    # Reset the batch
-                    self.reset()
-                    # Re-raise the exception
+                    # Only rollback and reset if it's not a retryable error
+                    from sql_batcher.exceptions import AdapterExecutionError
+                    if not isinstance(e, AdapterExecutionError):
+                        if not hasattr(self, '_in_savepoint_context'):
+                            await self._adapter.rollback_to_savepoint(savepoint_name)
+                        self.reset()
                     raise e
 
             # Release the savepoint
-            await self._adapter.release_savepoint(savepoint_name)
+            if not hasattr(self, '_in_savepoint_context'):
+                await self._adapter.release_savepoint(savepoint_name)
 
             # Reset the batch
             self.reset()
 
             return processed_statements
         except Exception as e:
-            # Rollback to the savepoint
-            await self._adapter.rollback_to_savepoint(savepoint_name)
-            # Reset the batch
-            self.reset()
-            # Re-raise the exception
+            # Only rollback and reset if it's not a retryable error
+            from sql_batcher.exceptions import AdapterExecutionError
+            if not isinstance(e, AdapterExecutionError):
+                if not hasattr(self, '_in_savepoint_context'):
+                    await self._adapter.rollback_to_savepoint(savepoint_name)
+                self.reset()
             raise e
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:

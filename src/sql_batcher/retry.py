@@ -4,9 +4,10 @@ This module provides utilities for retrying operations with configurable
 backoff strategies and timeout handling.
 """
 
+import asyncio
 import time
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar, Union
 
 from sql_batcher.exceptions import MaxRetriesExceededError, TimeoutError
 
@@ -40,54 +41,88 @@ class RetryConfig:
         self.timeout = timeout
 
 
-def with_retry(
-    func: Callable[..., T],
-    retry_config: Optional[RetryConfig] = None,
-) -> Callable[..., T]:
+def with_retry(retry_config: Optional[RetryConfig] = None) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to add retry functionality to a function.
 
     Args:
-        func: The function to retry
         retry_config: Configuration for retry behavior
 
     Returns:
-        A wrapped function that will retry on failure
+        A decorator that adds retry functionality to a function
     """
     if retry_config is None:
         retry_config = RetryConfig()
 
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        start_time = time.time()
-        last_exception = None
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> T:
+            start_time = time.time()
+            last_exception = None
 
-        for attempt in range(retry_config.max_retries + 1):
-            try:
-                # Check timeout before attempting
-                if retry_config.timeout is not None:
-                    elapsed = time.time() - start_time
-                    if elapsed >= retry_config.timeout:
-                        raise TimeoutError(retry_config.timeout)
+            for attempt in range(retry_config.max_retries + 1):
+                try:
+                    # Check timeout before attempting
+                    if retry_config.timeout is not None:
+                        elapsed = time.time() - start_time
+                        if elapsed >= retry_config.timeout:
+                            raise TimeoutError(retry_config.timeout)
 
-                return func(*args, **kwargs)
+                    return await func(*args, **kwargs)
 
-            except Exception as e:
-                last_exception = e
+                except Exception as e:
+                    last_exception = e
 
-                # Don't retry on last attempt
-                if attempt == retry_config.max_retries:
-                    break
+                    # Don't retry on last attempt
+                    if attempt == retry_config.max_retries:
+                        break
 
-                # Calculate delay with exponential backoff
-                delay = min(
-                    retry_config.initial_delay * (retry_config.backoff_factor**attempt),
-                    retry_config.max_delay,
-                )
+                    # Calculate delay with exponential backoff
+                    delay = min(
+                        retry_config.initial_delay * (retry_config.backoff_factor**attempt),
+                        retry_config.max_delay,
+                    )
 
-                # Sleep before retrying
-                time.sleep(delay)
+                    # Sleep before retrying
+                    await asyncio.sleep(delay)
 
-        # If we get here, all retries failed
-        raise MaxRetriesExceededError(retry_config.max_retries) from last_exception
+            # If we get here, all retries failed
+            raise MaxRetriesExceededError(retry_config.max_retries) from last_exception
 
-    return wrapper
+        @wraps(func)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> T:
+            start_time = time.time()
+            last_exception = None
+
+            for attempt in range(retry_config.max_retries + 1):
+                try:
+                    # Check timeout before attempting
+                    if retry_config.timeout is not None:
+                        elapsed = time.time() - start_time
+                        if elapsed >= retry_config.timeout:
+                            raise TimeoutError(retry_config.timeout)
+
+                    return func(*args, **kwargs)
+
+                except Exception as e:
+                    last_exception = e
+
+                    # Don't retry on last attempt
+                    if attempt == retry_config.max_retries:
+                        break
+
+                    # Calculate delay with exponential backoff
+                    delay = min(
+                        retry_config.initial_delay * (retry_config.backoff_factor**attempt),
+                        retry_config.max_delay,
+                    )
+
+                    # Sleep before retrying
+                    time.sleep(delay)
+
+            # If we get here, all retries failed
+            raise MaxRetriesExceededError(retry_config.max_retries) from last_exception
+
+        # Return appropriate wrapper based on whether the function is async
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+
+    return decorator
