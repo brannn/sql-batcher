@@ -26,7 +26,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
-    "pytest-xml",
+    "pytest-xdist",
 ]
 
 [project.urls]
