@@ -52,17 +52,11 @@ def test_plugin():
 
 
 @pytest.fixture
-def plugin_manager(test_plugin):
-    """Create a plugin manager with a test plugin."""
-    manager = PluginManager()
-    manager.register_plugin(test_plugin)
-    return manager
-
-
-@pytest.fixture
-def async_batcher(plugin_manager):
-    """Create an async batcher with a plugin manager."""
-    return AsyncSQLBatcher(plugin_manager=plugin_manager)
+def async_batcher(mock_adapter, test_plugin):
+    """Create an async batcher with a test plugin."""
+    batcher = AsyncSQLBatcher(adapter=mock_adapter)
+    batcher.register_plugin(test_plugin)
+    return batcher
 
 
 @pytest.mark.asyncio
