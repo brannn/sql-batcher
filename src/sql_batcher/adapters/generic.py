@@ -39,6 +39,10 @@ class GenericAdapter(SQLAdapter):
         self._max_query_size = max_query_size or 500_000  # Default 500KB
         self._cursor = None
 
+        # Create cursor if connection supports it
+        if hasattr(self._connection, "cursor"):
+            self._cursor = self._connection.cursor()
+
     def get_max_query_size(self) -> int:
         """
         Get the maximum query size in bytes.
@@ -70,23 +74,19 @@ class GenericAdapter(SQLAdapter):
             if hasattr(result, "fetchall"):
                 return list(result.fetchall())
             return list(result)
-        elif hasattr(self._connection, "cursor"):
-            # Try to get a cursor and use its execute method
-            if self._cursor is None:
-                self._cursor = self._connection.cursor()
-            if self._cursor is None:
-                return []
+        elif self._cursor is not None:
+            # Execute the query
             self._cursor.execute(sql)
+
+            # Get results if available
             if (
                 hasattr(self._cursor, "description")
                 and self._cursor.description is not None
             ):
-                try:
-                    result = self._cursor.fetchall()
-                    return list(result) if result is not None else []
-                except Exception as e:
-                    print(f"Exception in fetchall: {e}")  # Debug
-                    return []
+                result = self._cursor.fetchall()
+                return list(result) if result is not None else []
+
+            # No results for non-SELECT queries
             return []
         else:
             raise ValueError(
@@ -96,15 +96,16 @@ class GenericAdapter(SQLAdapter):
 
     def close(self) -> None:
         """Close the database connection."""
+        if self._cursor is not None:
+            self._cursor.close()
+            self._cursor = None
+
         if self._close_func:
             # Use the provided close function
             self._close_func()
         elif hasattr(self._connection, "close"):
             # Try to use connection's close method
             self._connection.close()
-        if self._cursor is not None:
-            self._cursor.close()
-            self._cursor = None
 
     def set_max_query_size(self, max_size: int) -> None:
         """

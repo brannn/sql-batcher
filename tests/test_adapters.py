@@ -3,6 +3,7 @@ Tests for SQL adapter base classes.
 """
 
 from typing import Any, List, Protocol, TypeVar
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -128,10 +129,39 @@ class TestGenericAdapter:
     """Test cases for GenericAdapter."""
 
     @pytest.fixture(autouse=True)
-    def setup_adapter(self, mock_db_connection: Any) -> None:
+    def setup_adapter(self) -> None:
         """Set up test fixtures."""
-        # Use the mocked database connection from conftest.py
-        self.connection = mock_db_connection
+        # Create a mock connection and cursor
+        self.connection = MagicMock()
+        self.cursor = MagicMock()
+
+        # Configure cursor behavior
+        self.cursor.description = [
+            ["id", "INT", None, None, None, None, None],
+            ["name", "VARCHAR", None, None, None, None, None],
+        ]
+        self.cursor.execute.return_value = None
+        self.cursor.fetchone.return_value = (1, "Test")
+        self.cursor.fetchmany.return_value = [(1, "Test")]
+        self.cursor.fetchall.return_value = [(1, "Test")]
+
+        # Configure cursor to handle execute calls
+        def execute_side_effect(sql: str) -> None:
+            if sql.strip().upper().startswith("SELECT"):
+                self.cursor.description = [
+                    ["id", "INT", None, None, None, None, None],
+                    ["name", "VARCHAR", None, None, None, None, None],
+                ]
+                self.cursor.fetchall.return_value = [(1, "Test")]
+            else:
+                self.cursor.description = None
+                self.cursor.fetchall.return_value = []
+            return None
+
+        self.cursor.execute.side_effect = execute_side_effect
+
+        # Configure connection to return cursor
+        self.connection.cursor.return_value = self.cursor
 
         # Create the adapter
         self.adapter = GenericAdapter(connection=self.connection, max_query_size=1000)
@@ -151,22 +181,30 @@ class TestGenericAdapter:
 
     def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
-        print(f"Before execute - Cursor: {self.adapter._cursor}")  # Debug
+        # Execute the query
         results = self.adapter.execute("SELECT * FROM test ORDER BY id")
-        print(f"After execute - Cursor: {self.adapter._cursor}")  # Debug
-        print(f"Results: {results}")  # Debug
 
         # Should return results (mocked in fixture)
         assert len(results) == 1
         assert results[0][0] == 1
         assert results[0][1] == "Test"
 
+        # Verify cursor was used correctly
+        self.cursor.execute.assert_called_once_with("SELECT * FROM test ORDER BY id")
+        self.cursor.fetchall.assert_called_once()
+
     def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
+        # Execute the query
         results = self.adapter.execute("INSERT INTO test VALUES (3, 'Test 3')")
 
         # Should not return results for INSERT
         assert len(results) == 0
+
+        # Verify cursor was used correctly
+        self.cursor.execute.assert_called_once_with(
+            "INSERT INTO test VALUES (3, 'Test 3')"
+        )
 
     def test_transactions(self) -> None:
         """Test transaction methods."""
