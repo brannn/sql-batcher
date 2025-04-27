@@ -17,6 +17,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-xml",
+]
+
 [project.urls]
 Homepage = "https://github.com/example/project"
 Issues = "https://github.com/example/project/issues"
