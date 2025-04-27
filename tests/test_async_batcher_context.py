@@ -1,6 +1,6 @@
 """Tests for async batcher context."""
 
-from typing import Any
+from typing import Any, Callable, Dict, List
 from unittest.mock import AsyncMock
 
 import pytest
@@ -23,7 +23,7 @@ class TestPlugin(Plugin):
         """Get the plugin name."""
         return "test_plugin"
 
-    def get_hooks(self) -> dict[HookType, list[callable[[HookContext], None]]]:
+    def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
         async def pre_batch_hook(context: HookContext) -> None:
             self.initialized = True
