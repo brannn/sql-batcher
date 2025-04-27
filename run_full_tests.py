@@ -27,7 +27,18 @@ def run_core_tests(options: List[str] = None) -> int:
     if os.environ.get("CI"):
         cmd = [
             "pytest",
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_defaults",
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_custom_values",
+            "tests/test_batcher.py::TestSQLBatcher::test_add_statement",
+            "tests/test_batcher.py::TestSQLBatcher::test_reset",
+            "-v"
+        ]
+    else:
+        # In local environment, we can be more selective
+        cmd = [
+            "pytest",
             "tests/test_batcher.py",
+            "tests/test_adapters.py",
             "tests/test_async_batcher.py",
             "tests/test_async_batcher_context.py",
             "tests/test_hook_manager.py",
@@ -44,16 +55,6 @@ def run_core_tests(options: List[str] = None) -> int:
             "-xvs",  # x: stop on first failure, v: verbose, s: show print statements
             "--import-mode=importlib",  # Use importlib mode for better import handling
             "-k", "not postgresql and not snowflake and not trino and not bigquery"  # Skip adapter tests
-        ]
-    else:
-        # In local environment, we can be more selective
-        cmd = [
-            "pytest",
-            "tests/test_batcher.py::TestSQLBatcher::test_init_with_defaults",
-            "tests/test_batcher.py::TestSQLBatcher::test_init_with_custom_values",
-            "tests/test_batcher.py::TestSQLBatcher::test_add_statement",
-            "tests/test_batcher.py::TestSQLBatcher::test_reset",
-            "-v"
         ]
 
     if options:
