@@ -47,8 +47,14 @@ async def postgres_adapter(mock_asyncpg_pool, monkeypatch):
 
 
 @pytest.fixture
+def async_batcher_with_mock(mock_adapter):
+    """Create an async batcher with a mock adapter for testing."""
+    return AsyncSQLBatcher(adapter=mock_adapter, max_bytes=1000)
+
+
+@pytest.fixture
 def async_batcher(postgres_adapter):
-    """Create an async batcher for testing."""
+    """Create an async batcher with a real adapter for testing."""
     return AsyncSQLBatcher(adapter=postgres_adapter, max_bytes=1000)
 
 
@@ -219,7 +225,7 @@ async def test_async_batcher_retry_handling(async_batcher):
 
 
 @pytest.mark.asyncio
-async def test_savepoint_functionality(async_batcher, mock_adapter):
+async def test_savepoint_functionality(async_batcher_with_mock, mock_adapter):
     """Test savepoint functionality in batch processing."""
     # Create a batch of statements
     statements = [
@@ -230,7 +236,7 @@ async def test_savepoint_functionality(async_batcher, mock_adapter):
 
     # Add statements to batcher
     for stmt in statements:
-        async_batcher.add_statement(stmt)
+        async_batcher_with_mock.add_statement(stmt)
 
     # Mock adapter to simulate a failure on the second statement
     mock_adapter.execute.side_effect = [
@@ -241,7 +247,7 @@ async def test_savepoint_functionality(async_batcher, mock_adapter):
 
     # Process statements and verify savepoint behavior
     with pytest.raises(Exception, match="Test error"):
-        await async_batcher.flush(mock_adapter.execute)
+        await async_batcher_with_mock.flush(mock_adapter.execute)
 
     # Verify that savepoint was created and rolled back
     mock_adapter.create_savepoint.assert_called_once()
@@ -253,7 +259,7 @@ async def test_savepoint_functionality(async_batcher, mock_adapter):
 
 
 @pytest.mark.asyncio
-async def test_savepoint_success(async_batcher, mock_adapter):
+async def test_savepoint_success(async_batcher_with_mock, mock_adapter):
     """Test successful batch processing with savepoints."""
     # Create a batch of statements
     statements = [
@@ -264,10 +270,10 @@ async def test_savepoint_success(async_batcher, mock_adapter):
 
     # Add statements to batcher
     for stmt in statements:
-        async_batcher.add_statement(stmt)
+        async_batcher_with_mock.add_statement(stmt)
 
     # Process statements
-    await async_batcher.flush(mock_adapter.execute)
+    await async_batcher_with_mock.flush(mock_adapter.execute)
 
     # Verify that savepoint was created and released
     mock_adapter.create_savepoint.assert_called_once()
@@ -279,7 +285,7 @@ async def test_savepoint_success(async_batcher, mock_adapter):
 
 
 @pytest.mark.asyncio
-async def test_savepoint_nested_transactions(async_batcher, mock_adapter):
+async def test_savepoint_nested_transactions(async_batcher_with_mock, mock_adapter):
     """Test savepoint behavior with nested transactions."""
     # Create a batch of statements
     statements = [
@@ -290,7 +296,7 @@ async def test_savepoint_nested_transactions(async_batcher, mock_adapter):
 
     # Add statements to batcher
     for stmt in statements:
-        async_batcher.add_statement(stmt)
+        async_batcher_with_mock.add_statement(stmt)
 
     # Mock adapter to simulate a failure in a nested transaction
     mock_adapter.execute.side_effect = [
@@ -301,7 +307,7 @@ async def test_savepoint_nested_transactions(async_batcher, mock_adapter):
 
     # Process statements and verify savepoint behavior
     with pytest.raises(Exception, match="Nested transaction error"):
-        await async_batcher.flush(mock_adapter.execute)
+        await async_batcher_with_mock.flush(mock_adapter.execute)
 
     # Verify that savepoint was created and rolled back
     mock_adapter.create_savepoint.assert_called_once()
@@ -313,7 +319,7 @@ async def test_savepoint_nested_transactions(async_batcher, mock_adapter):
 
 
 @pytest.mark.asyncio
-async def test_savepoint_error_handling(async_batcher, mock_adapter):
+async def test_savepoint_error_handling(async_batcher_with_mock, mock_adapter):
     """Test error handling in savepoint operations."""
     # Create a batch of statements
     statements = [
@@ -324,14 +330,14 @@ async def test_savepoint_error_handling(async_batcher, mock_adapter):
 
     # Add statements to batcher
     for stmt in statements:
-        async_batcher.add_statement(stmt)
+        async_batcher_with_mock.add_statement(stmt)
 
     # Mock adapter to simulate a failure in savepoint creation
     mock_adapter.create_savepoint.side_effect = Exception("Savepoint creation failed")
 
     # Process statements and verify error handling
     with pytest.raises(Exception, match="Savepoint creation failed"):
-        await async_batcher.flush(mock_adapter.execute)
+        await async_batcher_with_mock.flush(mock_adapter.execute)
 
     # Verify that savepoint creation was attempted
     mock_adapter.create_savepoint.assert_called_once()
