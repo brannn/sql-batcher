@@ -169,6 +169,30 @@ class TrinoAdapter(SQLAdapter):
         """Rollback the current transaction."""
         self._cursor.execute("ROLLBACK")
 
+    def create_savepoint(self, name: str) -> None:
+        """Create a savepoint in the current transaction.
+
+        Args:
+            name: Name of the savepoint
+        """
+        self._cursor.execute(f"SAVEPOINT {name}")
+
+    def rollback_to_savepoint(self, name: str) -> None:
+        """Rollback to a previously created savepoint.
+
+        Args:
+            name: Name of the savepoint to rollback to
+        """
+        self._cursor.execute(f"ROLLBACK TO SAVEPOINT {name}")
+
+    def release_savepoint(self, name: str) -> None:
+        """Release a previously created savepoint.
+
+        Args:
+            name: Name of the savepoint to release
+        """
+        self._cursor.execute(f"RELEASE SAVEPOINT {name}")
+
     def close(self) -> None:
         """Close the connection."""
         if hasattr(self, "_cursor") and self._cursor is not None:

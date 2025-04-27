@@ -1,0 +1,85 @@
+Proposed Folder and File Structure
+
+sql_batcher/
+├── __init__.py
+├── batcher.py                  # SQLBatcher Core (Main interface class)
+├── batch_manager.py             # Handles batch sizing, merging, column-aware logic
+├── retry_manager.py             # Retry and timeout logic
+├── hook_manager.py              # Pre- and post-execution plugin system
+├── adapters/
+│   ├── __init__.py
+│   ├── base.py                  # Abstract BaseAdapter (sync + async interface definitions)
+│   ├── trino_adapter.py         # Trino-specific logic
+│   ├── postgres_adapter.py      # PostgreSQL-specific logic
+│   ├── snowflake_adapter.py     # Snowflake-specific logic
+│   ├── bigquery_adapter.py      # BigQuery-specific logic
+│   ├── spark_adapter.py         # SparkSQL-specific logic
+│   └── common/
+│       ├── __init__.py
+│       └── connection_pool.py   # (Optional) Shared pooling helpers
+├── collectors/
+│   ├── __init__.py
+│   ├── metrics_collector.py     # Prometheus-friendly batch metrics
+│   ├── query_collector.py       # Collects executed queries and metadata
+├── config.py                    # Global settings: max batch size, retry defaults
+├── exceptions.py                # All custom exception classes
+├── utils/
+│   ├── __init__.py
+│   ├── sql_utils.py             # Generic SQL parsing, INSERT merging helpers
+│   ├── typing_utils.py          # Common type hints and aliases
+│   └── timer.py                 # Small utility to time batches
+├── version.py                   # Centralized version info (e.g., __version__)
+
+OTHER IMPORTANT PROJECT FILES
+ 
+tests/                             # Unit and integration tests
+    ├── __init__.py
+    ├── test_batcher.py
+    ├── test_adapters/
+    ├── test_retry_manager.py
+    ├── test_hook_manager.py
+    ├── test_collectors.py
+    └── test_exceptions.py
+
+examples/
+    ├── trino_batch_insert_example.py
+    ├── async_postgres_batching_example.py
+    └── error_handling_example.py
+
+docs/
+    ├── index.md
+    ├── architecture.md
+    ├── adapter_contributions.md  # How to add a new adapter
+    └── roadmap.md
+
+setup.py                            # For packaging (or move to pyproject.toml)
+pyproject.toml                      # Build and dependency metadata
+README.md
+LICENSE
+CHANGELOG.md                        # Document version history
+.pre-commit-config.yaml             # Code linting hooks
+
+
+Visual Summary / Think of the structure like this:
+SQLBatcher (Core)
+ ├── BatchManager
+ ├── RetryManager
+ ├── HookManager
+ ├── MetricsCollector
+ └── Adapter Layer (Postgres / Trino / Snowflake / Spark / BigQuery)
+        └── Connection Pool (optional)
+
+
+Why This Structure Works
+Area
+Benefit
+Single Responsibility
+Each file/module focuses on one aspect (batching, retry, etc.)
+Extensible
+Easy to add new database adapters or hook types
+Testing Isolation
+Every major component can be unit-tested separately
+Future-Proof
+Async integration and plugin system naturally fit
+Developer Friendly
+Easy onboarding and contribution for new developers

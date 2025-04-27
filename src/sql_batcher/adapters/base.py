@@ -74,6 +74,42 @@ class SQLAdapter(ABC):
         """
         pass
 
+    def create_savepoint(self, name: str) -> None:
+        """
+        Create a savepoint in the current transaction.
+
+        Default implementation does nothing.
+        Subclasses should override if the database supports savepoints.
+
+        Args:
+            name: Name of the savepoint
+        """
+        pass
+
+    def rollback_to_savepoint(self, name: str) -> None:
+        """
+        Rollback to a previously created savepoint.
+
+        Default implementation does nothing.
+        Subclasses should override if the database supports savepoints.
+
+        Args:
+            name: Name of the savepoint to rollback to
+        """
+        pass
+
+    def release_savepoint(self, name: str) -> None:
+        """
+        Release a previously created savepoint.
+
+        Default implementation does nothing.
+        Subclasses should override if the database supports savepoints.
+
+        Args:
+            name: Name of the savepoint to release
+        """
+        pass
+
 
 class GenericAdapter(SQLAdapter):
     """

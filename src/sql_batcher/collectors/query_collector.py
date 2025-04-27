@@ -1,8 +1,11 @@
-"""
-QueryCollector: A utility class for collecting and tracking SQL queries.
+"""Query collector for SQL Batcher.
+
+This module collects and tracks SQL queries and their metadata.
 """
 
 from typing import Any, Dict, List, Optional
+
+from sql_batcher.exceptions import QueryCollectorError
 
 
 class QueryCollector:

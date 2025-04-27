@@ -8,6 +8,8 @@ to reduce the number of database calls and improve performance.
 import re
 from typing import Dict, List, Optional, Protocol, TypedDict
 
+from sql_batcher.exceptions import InsertMergerError
+
 
 class TableData(TypedDict):
     """Type definition for table data dictionary."""

@@ -1,28 +1,33 @@
+"""SQL Batcher - A Python library for efficient SQL batching.
+
+This package provides tools for batching SQL statements, managing database
+connections, and optimizing database operations.
 """
-SQL Batcher - Efficiently batch SQL statements based on size limits
 
-SQL Batcher addresses a common challenge in database programming: efficiently
-executing many SQL statements while respecting query size limitations. It's
-especially valuable for systems like Trino, Spark SQL, and Snowflake that
-have query size or memory constraints.
-
-Examples:
-    Basic usage:
-
-    >>> from sql_batcher import SQLBatcher
-    >>> batcher = SQLBatcher(max_bytes=1000000)
-    >>> statements = [
-    ...     "INSERT INTO users VALUES (1, 'Alice')",
-    ...     "INSERT INTO users VALUES (2, 'Bob')"
-    ... ]
-    >>> def execute_sql(sql):
-    ...     print(f"Executing: {sql}")
-    ...     # In a real scenario, this would execute the SQL
-    >>> batcher.process_statements(statements, execute_sql)
-"""
+from sql_batcher.async_batcher import AsyncSQLBatcher
+from sql_batcher.batch_manager import BatchManager
+from sql_batcher.batcher import SQLBatcher
+from sql_batcher.exceptions import (
+    InsertMergerError,
+    PluginError,
+    QueryCollectorError,
+    RetryError,
+    SQLBatcherError,
+)
+from sql_batcher.hook_manager import HookManager
+from sql_batcher.retry_manager import RetryManager
 
 __version__ = "0.1.0"
 
-from sql_batcher.batcher import SQLBatcher
-
-__all__ = ["SQLBatcher"]
+__all__ = [
+    "SQLBatcher",
+    "AsyncSQLBatcher",
+    "BatchManager",
+    "RetryManager",
+    "HookManager",
+    "SQLBatcherError",
+    "RetryError",
+    "PluginError",
+    "QueryCollectorError",
+    "InsertMergerError",
+]
