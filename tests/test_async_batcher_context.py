@@ -66,7 +66,9 @@ async def test_context_manager_normal_flow(async_batcher, test_plugin):
         # Add a statement to trigger hooks
         batcher.add_statement("SELECT 1")
         # Flush to trigger hooks
-        await batcher.flush(lambda sql: None)
+        async def execute_callback(sql: str) -> None:
+            pass
+        await batcher.flush(execute_callback)
         assert test_plugin.initialized
         assert not test_plugin.cleaned_up
 
@@ -82,7 +84,9 @@ async def test_context_manager_error_flow(async_batcher, test_plugin):
             # Add a statement to trigger hooks
             batcher.add_statement("SELECT 1")
             # Flush to trigger hooks
-            await batcher.flush(lambda sql: None)
+            async def execute_callback(sql: str) -> None:
+                pass
+            await batcher.flush(execute_callback)
             assert test_plugin.initialized
             assert not test_plugin.cleaned_up
             raise Exception("Test error")
