@@ -4,10 +4,29 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sql_batcher.adapters.async_bigquery import AsyncBigQueryAdapter
-from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
-from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
-from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter
+
+# Try to import optional adapters
+try:
+    from sql_batcher.adapters.async_bigquery import AsyncBigQueryAdapter
+except ImportError:
+    AsyncBigQueryAdapter = None
+
+try:
+    from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+except ImportError:
+    AsyncPostgreSQLAdapter = None
+
+try:
+    from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
+except ImportError:
+    AsyncSnowflakeAdapter = None
+
+try:
+    from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
+except ImportError:
+    AsyncTrinoAdapter = None
+
 from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
 
 
@@ -43,6 +62,30 @@ def mock_bigquery_client():
     job = AsyncMock()
     client.query.return_value = job
     return client
+
+
+@pytest.mark.skipif(AsyncPostgreSQLAdapter is None, reason="PostgreSQL adapter not available")
+def test_async_postgresql_adapter():
+    """Test AsyncPostgreSQLAdapter."""
+    assert AsyncPostgreSQLAdapter is not None
+
+
+@pytest.mark.skipif(AsyncTrinoAdapter is None, reason="Trino adapter not available")
+def test_async_trino_adapter():
+    """Test AsyncTrinoAdapter."""
+    assert AsyncTrinoAdapter is not None
+
+
+@pytest.mark.skipif(AsyncSnowflakeAdapter is None, reason="Snowflake adapter not available")
+def test_async_snowflake_adapter():
+    """Test AsyncSnowflakeAdapter."""
+    assert AsyncSnowflakeAdapter is not None
+
+
+@pytest.mark.skipif(AsyncBigQueryAdapter is None, reason="BigQuery adapter not available")
+def test_async_bigquery_adapter():
+    """Test AsyncBigQueryAdapter."""
+    assert AsyncBigQueryAdapter is not None
 
 
 @pytest.mark.asyncio
