@@ -95,7 +95,10 @@ def run_demo() -> None:
     print("\nTest 1: Without insert merging")
     collector = QueryCollector()
     batcher = SQLBatcher(
-        adapter=adapter, max_bytes=1_000_000, batch_mode=True, collector=collector
+        adapter=adapter,
+        max_bytes=1_000_000,
+        batch_mode=True,
+        _collector=collector,  # Use _collector to avoid passing to QueryCollector
     )
 
     start_time = time.time()
@@ -115,7 +118,10 @@ def run_demo() -> None:
     print("\nTest 2: With insert merging")
     collector = QueryCollector()  # Reset collector
     batcher = SQLBatcher(
-        adapter=adapter, max_bytes=1_000_000, batch_mode=True, collector=collector
+        adapter=adapter,
+        max_bytes=1_000_000,
+        batch_mode=True,
+        _collector=collector,  # Use _collector to avoid passing to QueryCollector
     )
 
     start_time = time.time()
