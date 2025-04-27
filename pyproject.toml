@@ -28,6 +28,18 @@ dev = [
     "pytest-cov",
     "pytest-xdist",
 ]
+postgresql = [
+    "psycopg2-binary",
+]
+snowflake = [
+    "snowflake-connector-python",
+]
+trino = [
+    "trino",
+]
+bigquery = [
+    "google-cloud-bigquery",
+]
 
 [project.urls]
 Homepage = "https://github.com/example/project"

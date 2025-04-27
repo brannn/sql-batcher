@@ -4,10 +4,28 @@ SQL Batcher adapters.
 This module provides adapters for various SQL databases.
 """
 
-from sql_batcher.adapters.async_bigquery import AsyncBigQueryAdapter
-from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
-from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
-from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
+
+try:
+    from sql_batcher.adapters.async_bigquery import AsyncBigQueryAdapter
+except ImportError:
+    AsyncBigQueryAdapter = None
+
+try:
+    from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+except ImportError:
+    AsyncPostgreSQLAdapter = None
+
+try:
+    from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
+except ImportError:
+    AsyncSnowflakeAdapter = None
+
+try:
+    from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
+except ImportError:
+    AsyncTrinoAdapter = None
+
 from sql_batcher.adapters.bigquery import BigQueryAdapter
 from sql_batcher.adapters.postgresql import PostgreSQLAdapter
 from sql_batcher.adapters.snowflake import SnowflakeAdapter
@@ -15,6 +33,8 @@ from sql_batcher.adapters.spark import SparkAdapter
 from sql_batcher.adapters.trino import TrinoAdapter
 
 __all__ = [
+    "AsyncSQLAdapter",
+    "SQLAdapter",
     "AsyncBigQueryAdapter",
     "AsyncPostgreSQLAdapter",
     "AsyncSnowflakeAdapter",
