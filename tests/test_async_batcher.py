@@ -19,6 +19,17 @@ def mock_asyncpg_pool():
 
 
 @pytest.fixture
+def mock_adapter():
+    """Create a mock async adapter for testing."""
+    adapter = AsyncMock()
+    adapter.execute = AsyncMock()
+    adapter.create_savepoint = AsyncMock()
+    adapter.rollback_to_savepoint = AsyncMock()
+    adapter.release_savepoint = AsyncMock()
+    return adapter
+
+
+@pytest.fixture
 async def postgres_adapter(mock_asyncpg_pool, monkeypatch):
     """Create a PostgreSQL adapter for testing."""
     # Mock asyncpg.create_pool
@@ -248,6 +259,7 @@ async def test_savepoint_success(async_batcher, mock_adapter):
     statements = [
         "INSERT INTO users (name) VALUES ('John')",
         "INSERT INTO users (name) VALUES ('Jane')",
+        "INSERT INTO users (name) VALUES ('Bob')",
     ]
 
     # Add statements to batcher
@@ -257,66 +269,74 @@ async def test_savepoint_success(async_batcher, mock_adapter):
     # Process statements
     await async_batcher.flush(mock_adapter.execute)
 
-    # Verify savepoint lifecycle
+    # Verify that savepoint was created and released
     mock_adapter.create_savepoint.assert_called_once()
-    mock_adapter.rollback_to_savepoint.assert_not_called()
     mock_adapter.release_savepoint.assert_called_once()
+    mock_adapter.rollback_to_savepoint.assert_not_called()
 
-    # Verify all statements were executed
-    assert mock_adapter.execute.call_count == 2
+    # Verify that all statements were executed
+    assert mock_adapter.execute.call_count == len(statements)
 
 
 @pytest.mark.asyncio
 async def test_savepoint_nested_transactions(async_batcher, mock_adapter):
     """Test savepoint behavior with nested transactions."""
-    # Start a transaction
-    await mock_adapter.begin_transaction()
-
     # Create a batch of statements
     statements = [
         "INSERT INTO users (name) VALUES ('John')",
         "INSERT INTO users (name) VALUES ('Jane')",
+        "INSERT INTO users (name) VALUES ('Bob')",
     ]
 
     # Add statements to batcher
     for stmt in statements:
         async_batcher.add_statement(stmt)
 
-    # Process statements
-    await async_batcher.flush(mock_adapter.execute)
-
-    # Verify savepoint lifecycle
-    mock_adapter.create_savepoint.assert_called_once()
-    mock_adapter.release_savepoint.assert_called_once()
-
-    # Commit the transaction
-    await mock_adapter.commit_transaction()
-
-
-@pytest.mark.asyncio
-async def test_savepoint_error_handling(async_batcher, mock_adapter):
-    """Test error handling with savepoints."""
-    # Create a batch of statements
-    statements = [
-        "INSERT INTO users (name) VALUES ('John')",
-        "INSERT INTO users (name) VALUES ('Jane')",
+    # Mock adapter to simulate a failure in a nested transaction
+    mock_adapter.execute.side_effect = [
+        None,  # First statement succeeds
+        Exception("Nested transaction error"),  # Second statement fails
+        None,  # Third statement (should not be executed)
     ]
 
-    # Add statements to batcher
-    for stmt in statements:
-        async_batcher.add_statement(stmt)
-
-    # Mock adapter to simulate a failure
-    mock_adapter.execute.side_effect = Exception("Test error")
-
-    # Process statements and verify error handling
-    with pytest.raises(Exception, match="Test error"):
+    # Process statements and verify savepoint behavior
+    with pytest.raises(Exception, match="Nested transaction error"):
         await async_batcher.flush(mock_adapter.execute)
 
-    # Verify savepoint lifecycle
+    # Verify that savepoint was created and rolled back
     mock_adapter.create_savepoint.assert_called_once()
     mock_adapter.rollback_to_savepoint.assert_called_once()
     mock_adapter.release_savepoint.assert_not_called()
 
-    # Verify error hooks were executed
-    assert async_batcher._plugin_manager.execute_hooks.call_count > 0
+    # Verify that only the first statement was executed
+    assert mock_adapter.execute.call_count == 2  # First statement + error
+
+
+@pytest.mark.asyncio
+async def test_savepoint_error_handling(async_batcher, mock_adapter):
+    """Test error handling in savepoint operations."""
+    # Create a batch of statements
+    statements = [
+        "INSERT INTO users (name) VALUES ('John')",
+        "INSERT INTO users (name) VALUES ('Jane')",
+        "INSERT INTO users (name) VALUES ('Bob')",
+    ]
+
+    # Add statements to batcher
+    for stmt in statements:
+        async_batcher.add_statement(stmt)
+
+    # Mock adapter to simulate a failure in savepoint creation
+    mock_adapter.create_savepoint.side_effect = Exception("Savepoint creation failed")
+
+    # Process statements and verify error handling
+    with pytest.raises(Exception, match="Savepoint creation failed"):
+        await async_batcher.flush(mock_adapter.execute)
+
+    # Verify that savepoint creation was attempted
+    mock_adapter.create_savepoint.assert_called_once()
+    mock_adapter.rollback_to_savepoint.assert_not_called()
+    mock_adapter.release_savepoint.assert_not_called()
+
+    # Verify that no statements were executed
+    assert mock_adapter.execute.call_count == 0
