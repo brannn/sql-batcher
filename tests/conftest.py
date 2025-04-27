@@ -191,7 +191,7 @@ def spark_connection_params() -> Dict[str, str]:
 
 
 # Skip database tests if connection not available
-def pytest_collection_modifyitems(config, items) -> None:
+def pytest_collection_modifyitems_skip(config, items) -> None:
     """Skip tests based on markers and available connections."""
     skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
     skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")

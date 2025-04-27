@@ -5,7 +5,7 @@ This module provides a Snowflake-specific adapter for SQL Batcher with
 optimizations for Snowflake's features and limitations.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

@@ -5,7 +5,7 @@ This module provides a Trino-specific adapter for SQL Batcher, optimized for
 Trino's query limitations and capabilities.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

@@ -5,7 +5,7 @@ This module provides a generic adapter that can work with any database connectio
 by using callback functions for execution and closing.
 """
 
-from typing import Any, Callable, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, List, Optional, Tuple
 
 from sql_batcher.adapters.base import SQLAdapter
 

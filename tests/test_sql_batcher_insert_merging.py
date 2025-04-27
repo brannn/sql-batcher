@@ -3,7 +3,7 @@ Tests for the SQLBatcher class with insert merging feature.
 """
 
 import unittest
-from typing import Any, List, Optional
+from typing import Any, List
 
 from sql_batcher import SQLBatcher
 from sql_batcher.adapters.base import SQLAdapter

@@ -2,7 +2,7 @@
 Tests for SQL adapter base classes.
 """
 
-from typing import Any, Dict, Generator, List, Optional, Tuple, cast
+from typing import Any, Generator, List
 
 import pytest
 
