@@ -257,16 +257,10 @@ def mock_db_connection() -> MagicMock:
     mock_cursor = MagicMock()
     mock_connection.cursor.return_value = mock_cursor
     mock_cursor.description = [("id",), ("name",)]
-    mock_cursor.fetchall.return_value = [(1, "Test")]
     mock_cursor.execute.return_value = None
     mock_cursor.fetchone.return_value = (1, "Test")
     mock_cursor.fetchmany.return_value = [(1, "Test")]
-    mock_cursor.description = [("id",), ("name",)]  # Ensure description is set
     mock_cursor.fetchall.return_value = [
         (1, "Test")
-    ]  # Ensure fetchall returns the expected result
-    mock_cursor.execute.return_value = None  # Ensure execute returns None
-    mock_cursor.fetchall.side_effect = lambda: [
-        (1, "Test")
-    ]  # Use side_effect to ensure consistent behavior
+    ]  # Use return_value instead of side_effect
     return mock_connection
