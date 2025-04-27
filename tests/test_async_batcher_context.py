@@ -1,14 +1,14 @@
-"""Tests for async batcher context manager."""
+"""Tests for async batcher context."""
 
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 
-from sql_batcher import AsyncSQLBatcher
+from sql_batcher.async_batcher import AsyncSQLBatcher
 from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError
-from sql_batcher.plugins import HookContext, HookType, Plugin
+from sql_batcher.hooks.plugins import HookContext, HookType, Plugin
 
 
 class TestPlugin(Plugin):

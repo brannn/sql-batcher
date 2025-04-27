@@ -1,17 +1,17 @@
-"""Test plugins."""
+"""Tests for plugins."""
 
 from typing import Any, Dict, List
 
 import pytest
 
-from sql_batcher.plugins import (
+from sql_batcher.hooks.plugins import (
     HookContext,
     HookType,
-    MetricsCollector,
     Plugin,
     PluginManager,
-    QueryLogger,
     SQLPreprocessor,
+    MetricsCollector,
+    QueryLogger,
 )
 
 
