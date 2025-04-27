@@ -45,7 +45,7 @@ class SQLBatcher:
     ) -> None:
         """Initialize the SQL batcher."""
         self._adapter = adapter
-        self._max_bytes = max_bytes or adapter.get_max_query_size()
+        self._max_bytes = max_bytes or 1_000_000  # Default to 1MB if not specified
         self._batch_mode = batch_mode
         self._collector = QueryCollector(**kwargs)
 
@@ -112,7 +112,7 @@ class SQLBatcher:
         Args:
             statement: SQL statement to analyze
         """
-        if not self._batch_mode:
+        if not self._batch_mode or not self.auto_adjust_for_columns:
             return
 
         # Only detect columns if we haven't already
@@ -120,6 +120,7 @@ class SQLBatcher:
             detected_count = self.detect_column_count(statement)
             if detected_count is not None:
                 self._collector.set_column_count(detected_count)
+                self.column_count = detected_count
 
                 # Calculate adjustment factor
                 # More columns -> smaller batches (lower adjusted max_bytes)
@@ -129,12 +130,12 @@ class SQLBatcher:
                 )
 
                 # Clamp to min/max bounds
-                self._collector.set_adjustment_factor(
-                    max(
-                        self._collector.get_min_adjustment_factor(),
-                        min(self._collector.get_max_adjustment_factor(), raw_factor),
-                    )
+                factor = max(
+                    self._collector.get_min_adjustment_factor(),
+                    min(self._collector.get_max_adjustment_factor(), raw_factor),
                 )
+                self._collector.set_adjustment_factor(factor)
+                self.adjustment_factor = factor
 
                 # Logging for debugging
                 import logging
@@ -180,6 +181,10 @@ class SQLBatcher:
         # Update size
         statement_size = len(statement.encode("utf-8"))
         self._collector.update_current_size(statement_size)
+
+        # Update public attributes
+        self.current_batch = self._collector.get_batch()
+        self.current_size = self._collector.get_current_size()
 
         # Get adjusted max_bytes for comparison
         adjusted_max_bytes = self.get_adjusted_max_bytes()
@@ -233,6 +238,10 @@ class SQLBatcher:
 
             # Reset the batch
             self.reset()
+
+            # Update public attributes
+            self.current_batch = self._collector.get_batch()
+            self.current_size = self._collector.get_current_size()
 
             # Return the result
             return [result] if result is not None else []
