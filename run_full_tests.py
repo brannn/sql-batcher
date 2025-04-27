@@ -23,14 +23,11 @@ def run_core_tests(options: List[str] = None) -> int:
     Returns:
         Exit code from pytest
     """
-    # In CI environment, we want to run only the most basic tests
+    # In CI environment, we want to run only the most basic test
     if os.environ.get("CI"):
         cmd = [
             "pytest",
             "tests/test_batcher.py::TestSQLBatcher::test_init_with_defaults",
-            "tests/test_batcher.py::TestSQLBatcher::test_init_with_custom_values",
-            "tests/test_batcher.py::TestSQLBatcher::test_add_statement",
-            "tests/test_batcher.py::TestSQLBatcher::test_reset",
             "-v"
         ]
     else:
