@@ -151,8 +151,8 @@ class TestGenericAdapter:
 
     def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
-        print(f"Cursor description: {self.adapter._cursor.description}")  # Debug
         results = self.adapter.execute("SELECT * FROM test ORDER BY id")
+        print(f"Cursor description: {self.adapter._cursor.description}")  # Debug
         print(f"Results: {results}")  # Debug
 
         # Should return results (mocked in fixture)
