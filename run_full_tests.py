@@ -27,7 +27,12 @@ def run_core_tests(options: List[str] = None) -> int:
     if os.environ.get("CI"):
         cmd = [
             "pytest",
-            "-v"
+            "-v",
+            "--no-cov",  # Disable coverage in CI for now
+            "--no-header",  # Reduce noise
+            "--tb=short",  # Shorter tracebacks
+            "--maxfail=1",  # Stop on first failure
+            "-xvs"  # x: stop on first failure, v: verbose, s: show print statements
         ]
     else:
         # In local environment, we can be more selective
