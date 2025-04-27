@@ -10,7 +10,7 @@ from sql_batcher.insert_merger import InsertMerger
 class TestInsertMerger(unittest.TestCase):
     """Tests for the InsertMerger class."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test InsertMerger initialization."""
         merger = InsertMerger()
         self.assertEqual(merger.max_bytes, 900_000)
@@ -19,7 +19,7 @@ class TestInsertMerger(unittest.TestCase):
         merger = InsertMerger(max_bytes=1000)
         self.assertEqual(merger.max_bytes, 1000)
 
-    def test_add_non_insert_statement(self):
+    def test_add_non_insert_statement(self) -> None:
         """Test adding a non-INSERT statement."""
         merger = InsertMerger()
         statement = "SELECT * FROM test"
@@ -29,7 +29,7 @@ class TestInsertMerger(unittest.TestCase):
         self.assertEqual(result, statement)
         self.assertEqual(merger.table_maps, {})
 
-    def test_add_insert_statement(self):
+    def test_add_insert_statement(self) -> None:
         """Test adding a single INSERT statement."""
         merger = InsertMerger()
         statement = "INSERT INTO test VALUES (1)"
@@ -40,7 +40,7 @@ class TestInsertMerger(unittest.TestCase):
         self.assertIn("test", merger.table_maps)
         self.assertEqual(merger.table_maps["test"]["values"], ["(1)"])
 
-    def test_add_multiple_insert_statements_same_table(self):
+    def test_add_multiple_insert_statements_same_table(self) -> None:
         """Test adding multiple INSERT statements for the same table."""
         merger = InsertMerger()
 
@@ -68,7 +68,7 @@ class TestInsertMerger(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0], "INSERT INTO test VALUES (1), (2), (3)")
 
-    def test_add_insert_statements_different_tables(self):
+    def test_add_insert_statements_different_tables(self) -> None:
         """Test adding INSERT statements for different tables."""
         merger = InsertMerger()
 
@@ -100,7 +100,7 @@ class TestInsertMerger(unittest.TestCase):
             self.assertEqual(results[0], "INSERT INTO table2 VALUES (2)")
             self.assertEqual(results[1], "INSERT INTO table1 VALUES (1)")
 
-    def test_add_insert_statements_with_columns(self):
+    def test_add_insert_statements_with_columns(self) -> None:
         """Test adding INSERT statements that specify columns."""
         merger = InsertMerger()
 
@@ -128,7 +128,7 @@ class TestInsertMerger(unittest.TestCase):
             results[0], "INSERT INTO test (id, name) VALUES (1, 'Alice'), (2, 'Bob')"
         )
 
-    def test_incompatible_columns(self):
+    def test_incompatible_columns(self) -> None:
         """Test handling INSERT statements with incompatible columns."""
         merger = InsertMerger()
 
@@ -154,7 +154,7 @@ class TestInsertMerger(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0], "INSERT INTO test (id, name) VALUES (1, 'Alice')")
 
-    def test_max_bytes_limit(self):
+    def test_max_bytes_limit(self) -> None:
         """Test that merging respects the max_bytes limit."""
         # Small max_bytes to trigger flush after 2 statements
         merger = InsertMerger(max_bytes=50)

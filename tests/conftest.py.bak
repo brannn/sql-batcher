@@ -5,7 +5,7 @@ import pytest
 
 
 # Define test markers
-def pytest_configure(config):
+def pytest_configure(config) -> None:
     """Configure pytest with custom markers."""
     config.addinivalue_line(
         "markers", "core: tests that don't require database connections"
@@ -31,7 +31,7 @@ def pytest_configure(config):
 
 
 # PostgreSQL connection check
-def has_postgres_connection():
+def has_postgres_connection() -> None:
     """Check if PostgreSQL connection is available."""
     # Check for required environment variables
     required_vars = ["PGHOST", "PGPORT", "PGUSER", "PGDATABASE"]
@@ -60,7 +60,7 @@ def has_postgres_connection():
 
 
 # Connection check for other databases
-def has_snowflake_connection():
+def has_snowflake_connection() -> None:
     """Check if Snowflake connection is available."""
     # Check for required environment variables
     required_vars = [
@@ -82,7 +82,7 @@ def has_snowflake_connection():
         return False
 
 
-def has_trino_connection():
+def has_trino_connection() -> None:
     """Check if Trino connection is available."""
     # Check for required environment variables
     required_vars = ["TRINO_HOST", "TRINO_USER"]
@@ -99,7 +99,7 @@ def has_trino_connection():
         return False
 
 
-def has_bigquery_connection():
+def has_bigquery_connection() -> None:
     """Check if BigQuery connection is available."""
     # Check for required environment variables
     if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
@@ -114,7 +114,7 @@ def has_bigquery_connection():
         return False
 
 
-def has_spark_connection():
+def has_spark_connection() -> None:
     """Check if Spark connection is available."""
     # Check for pyspark package
     try:
@@ -126,7 +126,7 @@ def has_spark_connection():
 
 
 # Skip database tests if connection not available
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config, items) -> None:
     """Skip tests based on markers and available connections."""
     skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
     skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")
@@ -150,7 +150,7 @@ def pytest_collection_modifyitems(config, items):
 
 # Generic database connection fixture
 @pytest.fixture
-def mock_db_connection():
+def mock_db_connection() -> None:
     """Mock database connection for generic adapter tests."""
     conn = MagicMock()
     cursor = MagicMock()

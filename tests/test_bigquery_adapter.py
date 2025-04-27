@@ -12,7 +12,7 @@ class TestBigQueryAdapter:
     """Test cases for BigQueryAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch):
+    def setup(self, monkeypatch) -> None:
         """Set up test fixtures."""
         # Mock the google.cloud.bigquery module
         self.mock_bigquery = MagicMock()
@@ -42,7 +42,7 @@ class TestBigQueryAdapter:
             project_id="test-project", dataset_id="test_dataset", location="US"
         )
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test initialization."""
         # Check that the client was created with the correct parameters
         self.mock_bigquery.Client.assert_called_once_with(
@@ -55,13 +55,13 @@ class TestBigQueryAdapter:
         assert self.adapter._project_id == "test-project"
         assert self.adapter._location == "US"
 
-    def test_get_max_query_size(self):
+    def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""
         # BigQuery has different limits for interactive (1MB) and batch (20MB) queries
         # The adapter defaults to the interactive limit
         assert self.adapter.get_max_query_size() == 1_000_000
 
-    def test_execute_select(self):
+    def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
         # Execute a SELECT statement
         result = self.adapter.execute("SELECT id, name FROM `test_dataset.users`")
@@ -82,7 +82,7 @@ class TestBigQueryAdapter:
         assert result[1].id == 2
         assert result[1].name == "Another User"
 
-    def test_execute_insert(self):
+    def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
         # Setup mock to return an empty result for non-SELECT queries
         empty_mock_result = []
@@ -104,7 +104,7 @@ class TestBigQueryAdapter:
         # Verify result
         assert result == []
 
-    def test_execute_batch(self):
+    def test_execute_batch(self) -> None:
         """Test executing in batch mode."""
         # Create an adapter with batch_mode=True
         batch_adapter = BigQueryAdapter(
@@ -127,7 +127,7 @@ class TestBigQueryAdapter:
         # In batch mode, priority should be set to BATCH
         assert kwargs["job_config"].priority == self.mock_bigquery.QueryPriority.BATCH
 
-    def test_get_max_query_size_batch_mode(self):
+    def test_get_max_query_size_batch_mode(self) -> None:
         """Test max query size in batch mode."""
         # Create an adapter with batch_mode=True
         batch_adapter = BigQueryAdapter(
@@ -140,7 +140,7 @@ class TestBigQueryAdapter:
         # In batch mode, the limit should be 20MB
         assert batch_adapter.get_max_query_size() == 20_000_000
 
-    def test_close(self):
+    def test_close(self) -> None:
         """Test closing the connection."""
         # Run the method
         self.adapter.close()
@@ -148,7 +148,7 @@ class TestBigQueryAdapter:
         # Verify the client was closed
         self.mock_client.close.assert_called_once()
 
-    def test_dataset_reference(self):
+    def test_dataset_reference(self) -> None:
         """Test getting a dataset reference."""
         # Setup mock dataset reference
         mock_dataset_ref = MagicMock()
@@ -165,7 +165,7 @@ class TestBigQueryAdapter:
         # Verify the result
         assert result == mock_dataset_ref
 
-    def test_table_reference(self):
+    def test_table_reference(self) -> None:
         """Test getting a table reference."""
         # Setup mock references
         mock_dataset_ref = MagicMock()
@@ -187,7 +187,7 @@ class TestBigQueryAdapter:
         # Verify the result
         assert result == mock_table_ref
 
-    def test_get_query_job_config(self):
+    def test_get_query_job_config(self) -> None:
         """Test creating a query job configuration."""
         # Get a query job config
         result = self.adapter._get_query_job_config()
@@ -201,7 +201,7 @@ class TestBigQueryAdapter:
         # Verify priority is set to INTERACTIVE by default
         assert result.priority == self.mock_bigquery.QueryPriority.INTERACTIVE
 
-    def test_execute_with_job_labels(self):
+    def test_execute_with_job_labels(self) -> None:
         """Test execution with job labels."""
         # Create an adapter with job labels
         adapter_with_labels = BigQueryAdapter(
@@ -225,7 +225,7 @@ class TestBigQueryAdapter:
             "application": "sql-batcher",
         }
 
-    def test_missing_bigquery_package(self, monkeypatch):
+    def test_missing_bigquery_package(self, monkeypatch) -> None:
         """Test behavior when google.cloud.bigquery package is not installed."""
         # Simulate the bigquery package not being installed
         monkeypatch.setattr("sql_batcher.adapters.bigquery.bigquery", None)

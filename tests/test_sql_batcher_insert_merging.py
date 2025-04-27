@@ -11,7 +11,7 @@ from sql_batcher import SQLBatcher
 class TestSQLBatcherInsertMerging(unittest.TestCase):
     """Tests for the SQLBatcher class with insert merging."""
 
-    def test_init_with_insert_merging(self):
+    def test_init_with_insert_merging(self) -> None:
         """Test initializing SQLBatcher with insert merging enabled."""
         batcher = SQLBatcher(merge_inserts=True)
         self.assertTrue(batcher.merge_inserts)
@@ -22,7 +22,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         batcher = SQLBatcher()  # Default should be False
         self.assertFalse(batcher.merge_inserts)
 
-    def test_process_statements_with_insert_merging(self):
+    def test_process_statements_with_insert_merging(self) -> None:
         """Test processing statements with insert merging."""
         # Statements to process
         statements = [
@@ -105,7 +105,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         )
         self.assertTrue(update_executed, "UPDATE statement was not executed")
 
-    def test_process_statements_without_insert_merging(self):
+    def test_process_statements_without_insert_merging(self) -> None:
         """Test processing statements without insert merging."""
         # Statements to process
         statements = [
@@ -153,7 +153,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         # Verify all statements were executed
         self.assertEqual(statements_found, 6, "Not all statements were executed")
 
-    def test_incompatible_insert_statements(self):
+    def test_incompatible_insert_statements(self) -> None:
         """Test processing incompatible INSERT statements with merging enabled."""
         # Statements with incompatible columns
         statements = [

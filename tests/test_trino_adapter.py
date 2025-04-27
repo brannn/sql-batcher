@@ -12,7 +12,7 @@ class TestTrinoAdapter:
     """Test cases for TrinoAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch):
+    def setup(self, monkeypatch) -> None:
         """Set up test fixtures."""
         # Mock the trino.dbapi module
         self.mock_trino = MagicMock()
@@ -41,7 +41,7 @@ class TestTrinoAdapter:
             "distributed_join": "true",
         }
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test initialization."""
         # Check that the connection was created with the correct parameters
         self.mock_trino.connect.assert_called_once()
@@ -57,12 +57,12 @@ class TestTrinoAdapter:
         assert self.adapter._connection == self.mock_connection
         assert self.adapter._cursor == self.mock_cursor
 
-    def test_get_max_query_size(self):
+    def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""
         # Trino has a default max query size of 1MB (1,000,000 bytes)
         assert self.adapter.get_max_query_size() == 1_000_000
 
-    def test_execute_select(self):
+    def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
         # Configure the mock cursor to return test data
         self.mock_cursor.description = [("id",), ("name",)]
@@ -77,7 +77,7 @@ class TestTrinoAdapter:
         # Verify the result contains the expected data
         assert result == [(1, "Test User"), (2, "Another User")]
 
-    def test_execute_insert(self):
+    def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
         # Configure the mock cursor for an INSERT
         self.mock_cursor.description = None
@@ -94,7 +94,7 @@ class TestTrinoAdapter:
         # Verify the result is empty for non-SELECT statements
         assert result == []
 
-    def test_execute_with_session_properties(self):
+    def test_execute_with_session_properties(self) -> None:
         """Test execution with session properties."""
         # Configure the mock cursor
         self.mock_cursor.description = None
@@ -120,7 +120,7 @@ class TestTrinoAdapter:
             "CREATE TABLE test (id INT, name VARCHAR)"
         )
 
-    def test_begin_transaction(self):
+    def test_begin_transaction(self) -> None:
         """Test beginning a transaction."""
         # Run the method
         self.adapter.begin_transaction()
@@ -128,7 +128,7 @@ class TestTrinoAdapter:
         # Verify a start transaction statement was executed
         self.mock_cursor.execute.assert_called_once_with("START TRANSACTION")
 
-    def test_commit_transaction(self):
+    def test_commit_transaction(self) -> None:
         """Test committing a transaction."""
         # Run the method
         self.adapter.commit_transaction()
@@ -136,7 +136,7 @@ class TestTrinoAdapter:
         # Verify a commit statement was executed
         self.mock_cursor.execute.assert_called_once_with("COMMIT")
 
-    def test_rollback_transaction(self):
+    def test_rollback_transaction(self) -> None:
         """Test rolling back a transaction."""
         # Run the method
         self.adapter.rollback_transaction()
@@ -144,7 +144,7 @@ class TestTrinoAdapter:
         # Verify a rollback statement was executed
         self.mock_cursor.execute.assert_called_once_with("ROLLBACK")
 
-    def test_close(self):
+    def test_close(self) -> None:
         """Test closing the connection."""
         # Run the method
         self.adapter.close()
@@ -153,7 +153,7 @@ class TestTrinoAdapter:
         self.mock_cursor.close.assert_called_once()
         self.mock_connection.close.assert_called_once()
 
-    def test_get_catalogs(self):
+    def test_get_catalogs(self) -> None:
         """Test getting available catalogs."""
         # Configure the mock cursor to return test data
         self.mock_cursor.description = [("catalog_name",)]
@@ -168,7 +168,7 @@ class TestTrinoAdapter:
         # Verify the result
         assert result == ["hive", "mysql", "postgres"]
 
-    def test_get_schemas(self):
+    def test_get_schemas(self) -> None:
         """Test getting available schemas in a catalog."""
         # Configure the mock cursor to return test data
         self.mock_cursor.description = [("schema_name",)]
@@ -187,7 +187,7 @@ class TestTrinoAdapter:
         # Verify the result
         assert result == ["default", "public", "information_schema"]
 
-    def test_get_tables(self):
+    def test_get_tables(self) -> None:
         """Test getting available tables in a schema."""
         # Configure the mock cursor to return test data
         self.mock_cursor.description = [("table_name",)]
@@ -208,7 +208,7 @@ class TestTrinoAdapter:
         # Verify the result
         assert result == ["users", "orders", "products"]
 
-    def test_get_columns(self):
+    def test_get_columns(self) -> None:
         """Test getting columns for a table."""
         # Configure the mock cursor to return test data
         self.mock_cursor.description = [("column_name", "type")]
@@ -234,7 +234,7 @@ class TestTrinoAdapter:
             {"name": "created_at", "type": "timestamp"},
         ]
 
-    def test_set_session_property(self):
+    def test_set_session_property(self) -> None:
         """Test setting a session property."""
         # Clear previous calls
         self.mock_cursor.reset_mock()
@@ -252,7 +252,7 @@ class TestTrinoAdapter:
             self.adapter._session_properties["join_distribution_type"] == "PARTITIONED"
         )
 
-    def test_execute_with_http_headers(self):
+    def test_execute_with_http_headers(self) -> None:
         """Test execution with HTTP headers."""
         # Create an adapter with HTTP headers
         adapter_with_headers = TrinoAdapter(
@@ -263,7 +263,6 @@ class TestTrinoAdapter:
             schema="test_schema",
             http_headers={"X-Trino-Client-Info": "sql-batcher-test"},
         )
-        assert adapter_with_headers is not None
 
         # Verify the connection was created with the HTTP headers
         call_kwargs = self.mock_trino.connect.call_args_list[1].kwargs
@@ -271,7 +270,7 @@ class TestTrinoAdapter:
             "X-Trino-Client-Info": "sql-batcher-test"
         }
 
-    def test_missing_trino_package(self, monkeypatch):
+    def test_missing_trino_package(self, monkeypatch) -> None:
         """Test behavior when trino package is not installed."""
         # Simulate the trino package not being installed
         monkeypatch.setattr("sql_batcher.adapters.trino.trino", None)

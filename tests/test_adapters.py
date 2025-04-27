@@ -8,7 +8,7 @@ from sql_batcher.adapters.generic import GenericAdapter
 class TestSQLAdapter:
     """Test cases for abstract SQLAdapter class."""
 
-    def test_abstract_methods(self):
+    def test_abstract_methods(self) -> None:
         """Test that SQLAdapter requires implementing abstract methods."""
         # Should not be able to instantiate the abstract class
         with pytest.raises(TypeError):
@@ -40,7 +40,7 @@ class TestGenericAdapter:
     """Test cases for GenericAdapter."""
 
     @pytest.fixture(autouse=True)
-    def setup_adapter(self, mock_db_connection):
+    def setup_adapter(self, mock_db_connection) -> None:
         """Set up test fixtures."""
         # Use the mocked database connection from conftest.py
         self.connection = mock_db_connection
@@ -53,16 +53,16 @@ class TestGenericAdapter:
         # Clean up
         self.adapter.close()
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test initialization."""
         assert self.adapter.max_query_size == 1000
         assert self.adapter.fetch_results is True
 
-    def test_get_max_query_size(self):
+    def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""
         assert self.adapter.get_max_query_size() == 1000
 
-    def test_execute_select(self):
+    def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
         results = self.adapter.execute("SELECT * FROM test ORDER BY id")
 
@@ -71,14 +71,14 @@ class TestGenericAdapter:
         assert results[0][0] == 1
         assert results[0][1] == "Test"
 
-    def test_execute_insert(self):
+    def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
         results = self.adapter.execute("INSERT INTO test VALUES (3, 'Test 3')")
 
         # Should not return results for INSERT
         assert len(results) == 0
 
-    def test_execute_with_fetch_results_false(self):
+    def test_execute_with_fetch_results_false(self) -> None:
         """Test executing with fetch_results=False."""
         # Create an adapter with fetch_results=False
         adapter = GenericAdapter(connection=self.connection, fetch_results=False)
@@ -89,7 +89,7 @@ class TestGenericAdapter:
         # Should not return results when fetch_results is False
         assert len(results) == 0
 
-    def test_transactions(self):
+    def test_transactions(self) -> None:
         """Test transaction methods."""
         # Begin a transaction
         self.adapter.begin_transaction()

@@ -13,7 +13,7 @@ class TestPostgreSQLAdapter:
     """Test cases for PostgreSQLAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch):
+    def setup(self, monkeypatch) -> None:
         """Set up test fixtures."""
         # Create mock psycopg2 module
         mock_psycopg2 = Mock()
@@ -35,17 +35,17 @@ class TestPostgreSQLAdapter:
 
         # Initialize adapter
         self.adapter = PostgreSQLAdapter(
-            connection=self.mock_connection,  # Use the mock connection directly
+            connection_params=self.connection_params,  # Use the mock connection directly
             max_query_size=1_000_000,
             isolation_level="read_committed",
             fetch_results=True,
         )
 
-    def test_get_max_query_size(self):
+    def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""
         assert self.adapter.get_max_query_size() == 1_000_000
 
-    def test_execute_select(self):
+    def test_execute_select(self) -> None:
         """Test executing a SELECT statement."""
         # Set up mock
         self.mock_cursor.description = [("id",), ("name",)]
@@ -59,7 +59,7 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.fetchall.assert_called_once()
         assert result == [(1, "Alice"), (2, "Bob")]
 
-    def test_execute_insert(self):
+    def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
         # Set up mock (no result for INSERT)
         self.mock_cursor.description = None
@@ -74,7 +74,7 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.fetchall.assert_not_called()
         assert result == []
 
-    def test_execute_copy(self):
+    def test_execute_copy(self) -> None:
         """Test executing a COPY statement."""
         # Execute a COPY query
         result = self.adapter.execute("COPY users FROM '/tmp/users.csv'")
@@ -86,7 +86,7 @@ class TestPostgreSQLAdapter:
         self.mock_connection.commit.assert_called_once()
         assert result == []
 
-    def test_execute_error_handling(self):
+    def test_execute_error_handling(self) -> None:
         """Test error handling in execute method."""
         # Set up mock to raise an exception
         self.mock_cursor.execute.side_effect = Exception("Database error")
@@ -95,7 +95,7 @@ class TestPostgreSQLAdapter:
         with pytest.raises(RuntimeError):
             self.adapter.execute("SELECT * FROM non_existent_table")
 
-    def test_begin_transaction(self):
+    def test_begin_transaction(self) -> None:
         """Test beginning a transaction."""
         # Set up mock
         self.mock_cursor.description = None
@@ -107,7 +107,7 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.execute.assert_called_once_with("BEGIN")
         assert self.adapter._in_transaction is True
 
-    def test_commit_transaction(self):
+    def test_commit_transaction(self) -> None:
         """Test committing a transaction."""
         # Set up mock
         self.adapter._in_transaction = True
@@ -119,7 +119,7 @@ class TestPostgreSQLAdapter:
         self.mock_connection.commit.assert_called_once()
         assert self.adapter._in_transaction is False
 
-    def test_rollback_transaction(self):
+    def test_rollback_transaction(self) -> None:
         """Test rolling back a transaction."""
         # Set up mock
         self.adapter._in_transaction = True
@@ -131,7 +131,7 @@ class TestPostgreSQLAdapter:
         self.mock_connection.rollback.assert_called_once()
         assert self.adapter._in_transaction is False
 
-    def test_close(self):
+    def test_close(self) -> None:
         """Test closing the connection."""
         # Close the connection
         self.adapter.close()
@@ -140,7 +140,7 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.close.assert_called_once()
         self.mock_connection.close.assert_called_once()
 
-    def test_explain_analyze(self):
+    def test_explain_analyze(self) -> None:
         """Test running EXPLAIN ANALYZE."""
         # Set up mock
         self.mock_cursor.description = [("plan",)]
@@ -155,7 +155,7 @@ class TestPostgreSQLAdapter:
         )
         assert result == [("Seq Scan on users",)]
 
-    def test_create_temp_table(self):
+    def test_create_temp_table(self) -> None:
         """Test creating a temporary table."""
         # Create a temp table with a SELECT
         self.adapter.create_temp_table("temp_users", "SELECT * FROM users")
@@ -165,7 +165,7 @@ class TestPostgreSQLAdapter:
             "CREATE TEMP TABLE temp_users AS SELECT * FROM users"
         )
 
-    def test_get_server_version(self):
+    def test_get_server_version(self) -> None:
         """Test getting the server version."""
         # Set up mock
         self.mock_cursor.description = [("version",)]
@@ -178,13 +178,13 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.execute.assert_called_once_with("SHOW server_version")
         assert result == (14, 2, 0)
 
-    def test_missing_psycopg2(self, monkeypatch):
+    def test_missing_psycopg2(self, monkeypatch) -> None:
         """Test behavior when psycopg2 is not installed."""
         monkeypatch.setattr("sql_batcher.adapters.postgresql._has_psycopg2", False)
         with pytest.raises(ImportError):
             PostgreSQLAdapter(connection_params={"host": "localhost"})
 
-    def test_execute_batch(self):
+    def test_execute_batch(self) -> None:
         """Test executing a batch of statements."""
         # Set up statements
         statements = [
@@ -202,7 +202,7 @@ class TestPostgreSQLAdapter:
         assert self.mock_cursor.execute.call_count == 2
         assert result == []
 
-    def test_use_copy_for_bulk_insert_stdin(self, monkeypatch):
+    def test_use_copy_for_bulk_insert_stdin(self, monkeypatch) -> None:
         """Test using COPY for bulk insert via STDIN."""
         # Skip this test as it requires specific psycopg2 functionality that is hard to mock properly
         # Instead, we'll replace it with a simpler test of the core functionality
@@ -235,7 +235,7 @@ class TestPostgreSQLAdapter:
             # Restore the original method
             self.adapter.use_copy_for_bulk_insert = original_method
 
-    def test_create_indices(self):
+    def test_create_indices(self) -> None:
         """Test creating indices."""
         # Set up test data
         table_name = "users"
