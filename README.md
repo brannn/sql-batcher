@@ -25,6 +25,21 @@ SQL Batcher helps manage large volumes of SQL statements when working with datab
 pip install sql-batcher
 ```
 
+## Development Setup
+
+### Git Hooks
+
+This repository includes git hooks to ensure code quality. To set up the hooks:
+
+```bash
+# Run the setup script
+./setup-hooks.sh
+```
+
+The hooks will:
+- Format code using black and isort before each commit
+- Automatically add formatted files to the commit
+
 ## Basic Usage
 
 ```python
