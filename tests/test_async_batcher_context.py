@@ -62,7 +62,11 @@ def async_batcher(mock_adapter, test_plugin):
 @pytest.mark.asyncio
 async def test_context_manager_normal_flow(async_batcher, test_plugin):
     """Test normal flow of context manager."""
-    async with async_batcher:
+    async with async_batcher as batcher:
+        # Add a statement to trigger hooks
+        batcher.add_statement("SELECT 1")
+        # Flush to trigger hooks
+        await batcher.flush(lambda sql: None)
         assert test_plugin.initialized
         assert not test_plugin.cleaned_up
 
@@ -74,7 +78,11 @@ async def test_context_manager_normal_flow(async_batcher, test_plugin):
 async def test_context_manager_error_flow(async_batcher, test_plugin):
     """Test error flow of context manager."""
     with pytest.raises(Exception):
-        async with async_batcher:
+        async with async_batcher as batcher:
+            # Add a statement to trigger hooks
+            batcher.add_statement("SELECT 1")
+            # Flush to trigger hooks
+            await batcher.flush(lambda sql: None)
             assert test_plugin.initialized
             assert not test_plugin.cleaned_up
             raise Exception("Test error")
