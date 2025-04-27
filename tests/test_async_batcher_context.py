@@ -1,5 +1,6 @@
 """Tests for async batcher context."""
 
+import logging
 from typing import Any, Callable, Dict, List
 from unittest.mock import AsyncMock
 
@@ -10,6 +11,9 @@ from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError
 from sql_batcher.hooks.plugins import HookContext, HookType, Plugin, PluginManager
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class TestPlugin(Plugin):
     """Test plugin for async batcher context."""
@@ -25,13 +29,25 @@ class TestPlugin(Plugin):
 
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
+        async def pre_batch_hook(context: HookContext) -> None:
+            logger.debug("pre_batch_hook called")
+            self.initialized = True
+
+        async def post_batch_hook(context: HookContext) -> None:
+            logger.debug("post_batch_hook called")
+            self.cleaned_up = True
+
         async def pre_execute_hook(context: HookContext) -> None:
+            logger.debug("pre_execute_hook called")
             self.initialized = True
 
         async def post_execute_hook(context: HookContext) -> None:
+            logger.debug("post_execute_hook called")
             self.cleaned_up = True
 
         return {
+            HookType.PRE_BATCH: [pre_batch_hook],
+            HookType.POST_BATCH: [post_batch_hook],
             HookType.PRE_EXECUTE: [pre_execute_hook],
             HookType.POST_EXECUTE: [post_execute_hook],
         }
@@ -65,6 +81,7 @@ async def test_context_manager_normal_flow(async_batcher, test_plugin):
     async with async_batcher as batcher:
         # Process statements to trigger hooks
         async def execute_callback(sql: str) -> None:
+            logger.debug(f"execute_callback called with: {sql}")
             pass
         await batcher.process_statements(["SELECT 1"], execute_callback)
         assert test_plugin.initialized
@@ -81,6 +98,7 @@ async def test_context_manager_error_flow(async_batcher, test_plugin):
         async with async_batcher as batcher:
             # Process statements to trigger hooks
             async def execute_callback(sql: str) -> None:
+                logger.debug(f"execute_callback called with: {sql}")
                 pass
             await batcher.process_statements(["SELECT 1"], execute_callback)
             assert test_plugin.initialized
