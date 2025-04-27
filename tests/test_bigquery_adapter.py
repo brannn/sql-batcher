@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -157,7 +157,7 @@ class TestBigQueryAdapter:
     def test_execute_insert(self) -> None:
         """Test executing an INSERT statement."""
         # Setup mock to return an empty result for non-SELECT queries
-        empty_mock_result = []
+        empty_mock_result: List[Any] = []
         self.mock_query_job.result.return_value = empty_mock_result
 
         # Execute an INSERT statement
@@ -178,12 +178,12 @@ class TestBigQueryAdapter:
 
     def test_execute_batch(self) -> None:
         """Test executing in batch mode."""
-        # Create an adapter with batch_mode=True
+        # Create an adapter with use_batch_mode=True
         batch_adapter = BigQueryAdapter(
             project_id="test-project",
             dataset_id="test_dataset",
             location="US",
-            batch_mode=True,
+            use_batch_mode=True,
         )
 
         # Reset the mock
@@ -200,13 +200,13 @@ class TestBigQueryAdapter:
         assert kwargs["job_config"].priority == self.mock_bigquery.QueryPriority.BATCH
 
     def test_get_max_query_size_batch_mode(self) -> None:
-        """Test max query size in batch mode."""
-        # Create an adapter with batch_mode=True
+        """Test get_max_query_size in batch mode."""
+        # Create an adapter with use_batch_mode=True
         batch_adapter = BigQueryAdapter(
             project_id="test-project",
             dataset_id="test_dataset",
             location="US",
-            batch_mode=True,
+            use_batch_mode=True,
         )
 
         # In batch mode, the limit should be 20MB
@@ -221,57 +221,32 @@ class TestBigQueryAdapter:
         self.mock_client.close.assert_called_once()
 
     def test_dataset_reference(self) -> None:
-        """Test getting a dataset reference."""
-        # Setup mock dataset reference
-        mock_dataset_ref = MagicMock()
-        self.mock_client.dataset.return_value = mock_dataset_ref
-
+        """Test dataset reference creation."""
         # Get the dataset reference
-        result = self.adapter._get_dataset_reference()
+        dataset_ref = self.adapter._get_dataset_reference()
 
-        # Verify the client.dataset method was called with the correct ID
-        self.mock_client.dataset.assert_called_once_with(
-            "test_dataset", project="test-project"
-        )
-
-        # Verify the result
-        assert result == mock_dataset_ref
+        # Verify the reference was created correctly
+        assert dataset_ref.project == "test-project"
+        assert dataset_ref.dataset_id == "test_dataset"
 
     def test_table_reference(self) -> None:
-        """Test getting a table reference."""
-        # Setup mock references
-        mock_dataset_ref = MagicMock()
-        mock_table_ref = MagicMock()
-        self.mock_client.dataset.return_value = mock_dataset_ref
-        mock_dataset_ref.table.return_value = mock_table_ref
-
+        """Test table reference creation."""
         # Get the table reference
-        result = self.adapter._get_table_reference("users")
+        table_ref = self.adapter._get_table_reference("users")
 
-        # Verify the dataset reference was retrieved
-        self.mock_client.dataset.assert_called_once_with(
-            "test_dataset", project="test-project"
-        )
-
-        # Verify the table method was called
-        mock_dataset_ref.table.assert_called_once_with("users")
-
-        # Verify the result
-        assert result == mock_table_ref
+        # Verify the reference was created correctly
+        assert table_ref.project == "test-project"
+        assert table_ref.dataset_id == "test_dataset"
+        assert table_ref.table_id == "users"
 
     def test_get_query_job_config(self) -> None:
-        """Test creating a query job configuration."""
-        # Get a query job config
-        result = self.adapter._get_query_job_config()
+        """Test query job configuration."""
+        # Get the job config
+        job_config = self.adapter._get_query_job_config()
 
-        # Verify the QueryJobConfig was created
-        self.mock_bigquery.QueryJobConfig.assert_called_once()
-
-        # Verify the result
-        assert result == self.mock_job_config
-
-        # Verify priority is set to INTERACTIVE by default
-        assert result.priority == self.mock_bigquery.QueryPriority.INTERACTIVE
+        # Verify the config was created correctly
+        assert job_config.location == "US"
+        assert job_config.priority == self.mock_bigquery.QueryPriority.INTERACTIVE
 
     def test_execute_with_job_labels(self) -> None:
         """Test execution with job labels."""
@@ -280,31 +255,28 @@ class TestBigQueryAdapter:
             project_id="test-project",
             dataset_id="test_dataset",
             location="US",
-            job_labels={"department": "analytics", "application": "sql-batcher"},
+            job_labels={"environment": "test"},
         )
 
-        # Reset the mock
-        self.mock_client.reset_mock()
-        self.mock_bigquery.QueryJobConfig.reset_mock()
-
         # Execute a query
-        adapter_with_labels.execute("SELECT 1")
+        adapter_with_labels.execute("SELECT * FROM `test_dataset.users`")
 
-        # Verify the job config was created with labels
-        args, kwargs = self.mock_client.query.call_args
-        assert kwargs["job_config"].labels == {
-            "department": "analytics",
-            "application": "sql-batcher",
-        }
+        # Verify the job config included the labels
+        job_config = self.mock_client.query.call_args[1]["job_config"]
+        assert job_config.labels == {"environment": "test"}
 
     def test_missing_bigquery_package(self, monkeypatch) -> None:
-        """Test behavior when google.cloud.bigquery package is not installed."""
+        """Test behavior when bigquery package is not installed."""
         # Simulate the bigquery package not being installed
         monkeypatch.setattr("sql_batcher.adapters.bigquery.bigquery", None)
 
         # Attempting to create the adapter should raise an ImportError
         with pytest.raises(ImportError) as excinfo:
-            BigQueryAdapter(project_id="test-project", dataset_id="test_dataset")
+            BigQueryAdapter(
+                project_id="test-project",
+                dataset_id="test_dataset",
+                location="US",
+            )
 
         # Verify the error message
         assert "google-cloud-bigquery package is required" in str(excinfo.value)

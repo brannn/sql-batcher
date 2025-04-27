@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 
+from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.batcher import SQLBatcher
 from sql_batcher.query_collector import ListQueryCollector
 
@@ -13,7 +14,8 @@ class TestSQLBatcher:
     @pytest.fixture(autouse=True)
     def setup_batcher(self) -> None:
         """Set up test fixtures."""
-        self.batcher = SQLBatcher(max_bytes=100)
+        self.adapter = MockAdapter()
+        self.batcher = SQLBatcher(adapter=self.adapter)
         self.statements = [
             "INSERT INTO test VALUES (1)",
             "INSERT INTO test VALUES (2)",
@@ -22,14 +24,16 @@ class TestSQLBatcher:
 
     def test_init_with_defaults(self) -> None:
         """Test initialization with default values."""
-        batcher = SQLBatcher()
+        batcher = SQLBatcher(adapter=self.adapter)
         assert batcher.max_bytes == 1_000_000
         assert batcher.delimiter == ";"
         assert batcher.dry_run is False
 
     def test_init_with_custom_values(self) -> None:
         """Test initialization with custom values."""
-        batcher = SQLBatcher(max_bytes=500, delimiter="|", dry_run=True)
+        batcher = SQLBatcher(
+            adapter=self.adapter, max_bytes=500, delimiter="|", dry_run=True
+        )
         assert batcher.max_bytes == 500
         assert batcher.delimiter == "|"
         assert batcher.dry_run is True
@@ -100,7 +104,7 @@ class TestSQLBatcher:
     def test_dry_run_mode(self) -> None:
         """Test dry run mode with query collector."""
         # Create a batcher in dry run mode
-        batcher = SQLBatcher(max_bytes=100, dry_run=True)
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=100, dry_run=True)
 
         # Create a query collector
         collector = ListQueryCollector()
@@ -132,7 +136,7 @@ class TestSQLBatcher:
     def test_oversized_statement(self) -> None:
         """Test handling of statements that exceed the maximum batch size."""
         # Create a batcher with a very small size limit
-        batcher = SQLBatcher(max_bytes=10)
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=10)
 
         # Create a statement that exceeds the limit
         oversized_statement = "INSERT INTO test VALUES (1, 'This is a very long value that exceeds the limit')"
@@ -151,7 +155,7 @@ class TestSQLBatcher:
 
     def test_column_detection(self) -> None:
         """Test column count detection in INSERT statements."""
-        batcher = SQLBatcher()
+        batcher = SQLBatcher(adapter=self.adapter)
 
         # Test with explicit column list
         result = batcher.detect_column_count(
@@ -179,7 +183,10 @@ class TestSQLBatcher:
         """Test automatic batch size adjustment based on column count."""
         # Create a batcher with auto-adjustment enabled and specific baseline
         batcher = SQLBatcher(
-            max_bytes=1_000_000, auto_adjust_for_columns=True, reference_column_count=10
+            adapter=self.adapter,
+            max_bytes=1_000_000,
+            auto_adjust_for_columns=True,
+            reference_column_count=10,
         )
 
         # Process statements with more columns than reference (should reduce batch size)
@@ -201,7 +208,10 @@ class TestSQLBatcher:
 
         # Create a batcher for narrow table test
         batcher = SQLBatcher(
-            max_bytes=1_000_000, auto_adjust_for_columns=True, reference_column_count=10
+            adapter=self.adapter,
+            max_bytes=1_000_000,
+            auto_adjust_for_columns=True,
+            reference_column_count=10,
         )
 
         # Process statements with fewer columns than reference (should increase batch size)
@@ -223,6 +233,7 @@ class TestSQLBatcher:
         """Test that adjustment factor is properly bounded."""
         # Create a batcher with specific bounds
         batcher = SQLBatcher(
+            adapter=self.adapter,
             auto_adjust_for_columns=True,
             reference_column_count=5,
             min_adjustment_factor=0.2,
@@ -240,6 +251,7 @@ class TestSQLBatcher:
 
         # Reset and test very narrow table
         batcher = SQLBatcher(
+            adapter=self.adapter,
             auto_adjust_for_columns=True,
             reference_column_count=5,
             min_adjustment_factor=0.2,
@@ -252,3 +264,14 @@ class TestSQLBatcher:
 
         # Should be clamped to max value
         assert batcher.adjustment_factor == 3.0
+
+
+class MockAdapter(SQLAdapter):
+    def execute(self, sql: str) -> List[Any]:
+        return []
+
+    def get_max_query_size(self) -> int:
+        return 1000
+
+    def close(self) -> None:
+        pass

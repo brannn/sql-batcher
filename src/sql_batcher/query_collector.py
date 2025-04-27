@@ -2,7 +2,7 @@
 QueryCollector: A utility class for collecting and tracking SQL queries.
 """
 
-from typing import List
+from typing import List, Optional
 
 
 class QueryCollector:
@@ -14,11 +14,34 @@ class QueryCollector:
 
     Attributes:
         queries (list): List of collected SQL statements.
+        current_size (int): Current size of collected queries in bytes.
+        column_count (Optional[int]): Number of columns in INSERT statements.
+        reference_column_count (int): Reference column count for batch size adjustment.
+        min_adjustment_factor (float): Minimum adjustment factor for batch size.
+        max_adjustment_factor (float): Maximum adjustment factor for batch size.
+        adjustment_factor (float): Current adjustment factor based on column count.
+        delimiter (str): SQL statement delimiter.
+        dry_run (bool): Whether to operate in dry run mode.
     """
 
-    def __init__(self) -> None:
-        """Initialize an empty QueryCollector."""
+    def __init__(
+        self,
+        delimiter: str = ";",
+        dry_run: bool = False,
+        reference_column_count: int = 10,
+        min_adjustment_factor: float = 0.5,
+        max_adjustment_factor: float = 2.0,
+    ) -> None:
+        """Initialize a QueryCollector."""
         self.queries: List[str] = []
+        self.current_size: int = 0
+        self.column_count: Optional[int] = None
+        self.reference_column_count = reference_column_count
+        self.min_adjustment_factor = min_adjustment_factor
+        self.max_adjustment_factor = max_adjustment_factor
+        self.adjustment_factor: float = 1.0
+        self.delimiter = delimiter
+        self.dry_run = dry_run
 
     def collect(self, query: str) -> None:
         """
@@ -32,6 +55,7 @@ class QueryCollector:
     def clear(self) -> None:
         """Clear all collected queries."""
         self.queries = []
+        self.current_size = 0
 
     def get_all(self) -> List[str]:
         """
@@ -50,3 +74,116 @@ class QueryCollector:
             int: Number of collected queries.
         """
         return len(self.queries)
+
+    def get_batch(self) -> List[str]:
+        """
+        Get the current batch of queries.
+
+        Returns:
+            list: Current batch of queries.
+        """
+        return self.queries
+
+    def get_current_size(self) -> int:
+        """
+        Get the current size of collected queries in bytes.
+
+        Returns:
+            int: Current size in bytes.
+        """
+        return self.current_size
+
+    def update_current_size(self, size: int) -> None:
+        """
+        Update the current size of collected queries.
+
+        Parameters:
+            size (int): Size to add to current size.
+        """
+        self.current_size += size
+
+    def reset(self) -> None:
+        """Reset the collector state."""
+        self.queries = []
+        self.current_size = 0
+
+    def get_column_count(self) -> Optional[int]:
+        """
+        Get the number of columns in INSERT statements.
+
+        Returns:
+            Optional[int]: Number of columns, or None if not set.
+        """
+        return self.column_count
+
+    def set_column_count(self, count: int) -> None:
+        """
+        Set the number of columns in INSERT statements.
+
+        Parameters:
+            count (int): Number of columns.
+        """
+        self.column_count = count
+
+    def get_reference_column_count(self) -> int:
+        """
+        Get the reference column count for batch size adjustment.
+
+        Returns:
+            int: Reference column count.
+        """
+        return self.reference_column_count
+
+    def get_min_adjustment_factor(self) -> float:
+        """
+        Get the minimum adjustment factor for batch size.
+
+        Returns:
+            float: Minimum adjustment factor.
+        """
+        return self.min_adjustment_factor
+
+    def get_max_adjustment_factor(self) -> float:
+        """
+        Get the maximum adjustment factor for batch size.
+
+        Returns:
+            float: Maximum adjustment factor.
+        """
+        return self.max_adjustment_factor
+
+    def get_adjustment_factor(self) -> float:
+        """
+        Get the current adjustment factor.
+
+        Returns:
+            float: Current adjustment factor.
+        """
+        return self.adjustment_factor
+
+    def set_adjustment_factor(self, factor: float) -> None:
+        """
+        Set the adjustment factor.
+
+        Parameters:
+            factor (float): New adjustment factor.
+        """
+        self.adjustment_factor = factor
+
+    def get_delimiter(self) -> str:
+        """
+        Get the SQL statement delimiter.
+
+        Returns:
+            str: SQL statement delimiter.
+        """
+        return self.delimiter
+
+    def is_dry_run(self) -> bool:
+        """
+        Check if dry run mode is enabled.
+
+        Returns:
+            bool: True if dry run mode is enabled.
+        """
+        return self.dry_run

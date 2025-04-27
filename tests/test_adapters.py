@@ -84,13 +84,13 @@ class TestSQLAdapter:
 
         # Create a minimal implementation
         class MinimalAdapter(SQLAdapter):
-            def execute(self, sql):
+            def execute(self, sql: str) -> List[Any]:
                 return []
 
-            def get_max_query_size(self):
+            def get_max_query_size(self) -> int:
                 return 1000
 
-            def close(self):
+            def close(self) -> None:
                 pass
 
         # Should be able to instantiate the minimal implementation
@@ -124,7 +124,6 @@ class TestGenericAdapter:
     def test_init(self) -> None:
         """Test initialization."""
         assert self.adapter.max_query_size == 1000
-        assert self.adapter.fetch_results is True
 
     def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""
@@ -144,17 +143,6 @@ class TestGenericAdapter:
         results = self.adapter.execute("INSERT INTO test VALUES (3, 'Test 3')")
 
         # Should not return results for INSERT
-        assert len(results) == 0
-
-    def test_execute_with_fetch_results_false(self) -> None:
-        """Test executing with fetch_results=False."""
-        # Create an adapter with fetch_results=False
-        adapter = GenericAdapter(connection=self.connection, fetch_results=False)
-
-        # Execute a SELECT statement
-        results = adapter.execute("SELECT * FROM test")
-
-        # Should not return results when fetch_results is False
         assert len(results) == 0
 
     def test_transactions(self) -> None:

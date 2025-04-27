@@ -23,15 +23,19 @@ class MockAdapter(SQLAdapter):
 class TestSQLBatcherInsertMerging(unittest.TestCase):
     """Tests for the SQLBatcher class with insert merging."""
 
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        self.adapter = MockAdapter()
+
     def test_init_with_insert_merging(self) -> None:
         """Test initializing SQLBatcher with insert merging enabled."""
-        batcher = SQLBatcher(merge_inserts=True)
+        batcher = SQLBatcher(adapter=self.adapter, merge_inserts=True)
         self.assertTrue(batcher.merge_inserts)
 
-        batcher = SQLBatcher(merge_inserts=False)
+        batcher = SQLBatcher(adapter=self.adapter, merge_inserts=False)
         self.assertFalse(batcher.merge_inserts)
 
-        batcher = SQLBatcher()  # Default should be False
+        batcher = SQLBatcher(adapter=self.adapter)  # Default should be False
         self.assertFalse(batcher.merge_inserts)
 
     def test_process_statements_with_insert_merging(self) -> None:
@@ -48,12 +52,12 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
 
         # Initialize SQLBatcher with insert merging enabled
         # Use a larger batch size to ensure all statements can be properly batched
-        batcher = SQLBatcher(max_bytes=1000, merge_inserts=True)
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=1000, merge_inserts=True)
 
         # Track executed SQL
         executed_sql: List[str] = []
 
-        def execute_fn(sql: str):
+        def execute_fn(sql: str) -> None:
             # Split the SQL by statements for easier analysis
             for stmt in sql.strip().split(";"):
                 if stmt.strip():
@@ -130,12 +134,12 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         ]
 
         # Initialize SQLBatcher with insert merging disabled and small batch size
-        batcher = SQLBatcher(max_bytes=50, merge_inserts=False)
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=50, merge_inserts=False)
 
         # Track executed SQL
         executed_sql: List[str] = []
 
-        def execute_fn(sql: str):
+        def execute_fn(sql: str) -> None:
             # Split the SQL by statements for easier analysis
             for stmt in sql.strip().split(";"):
                 if stmt.strip():
@@ -175,12 +179,12 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         ]
 
         # Initialize SQLBatcher with insert merging enabled and small batch size
-        batcher = SQLBatcher(max_bytes=50, merge_inserts=True)
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=50, merge_inserts=True)
 
         # Track executed SQL
         executed_sql: List[str] = []
 
-        def execute_fn(sql: str):
+        def execute_fn(sql: str) -> None:
             # Split the SQL by statements for easier analysis
             for stmt in sql.strip().split(";"):
                 if stmt.strip():
@@ -201,36 +205,29 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         for sql in executed_sql:
             sql = sql.strip().rstrip(";")
 
-            # Check for merged (id, name) statements
+            if "INSERT INTO users (id, name) VALUES (1, 'Alice')" in sql:
+                has_id_name_1 = True
+            if "INSERT INTO users (id, age) VALUES (2, 25)" in sql:
+                has_id_age = True
+            if "INSERT INTO users (id, name) VALUES (3, 'Charlie')" in sql:
+                has_id_name_3 = True
+
+            # Check if compatible statements were merged
             if (
-                "INSERT INTO users (id, name)" in sql
-                and "VALUES (1, 'Alice'), (3, 'Charlie')" in sql
+                "INSERT INTO users (id, name) VALUES (1, 'Alice')" in sql
+                and "INSERT INTO users (id, name) VALUES (3, 'Charlie')" in sql
             ):
                 name_statements_merged = True
-                has_id_name_1 = True
-                has_id_name_3 = True
-                continue
-
-            # Check for individual statements
-            if "INSERT INTO users (id, name)" in sql and "VALUES (1, 'Alice')" in sql:
-                has_id_name_1 = True
-
-            elif "INSERT INTO users (id, age)" in sql and "VALUES (2, 25)" in sql:
-                has_id_age = True
-
-            elif (
-                "INSERT INTO users (id, name)" in sql and "VALUES (3, 'Charlie')" in sql
-            ):
-                has_id_name_3 = True
 
         # Verify all statements were executed
-        self.assertTrue(has_id_name_1, "First INSERT statement was not executed")
-        self.assertTrue(has_id_age, "Second INSERT statement was not executed")
-        self.assertTrue(has_id_name_3, "Third INSERT statement was not executed")
+        self.assertTrue(has_id_name_1, "First name statement not executed")
+        self.assertTrue(has_id_age, "Age statement not executed")
+        self.assertTrue(has_id_name_3, "Second name statement not executed")
 
-        # We expect either individual statements or merged (id, name) statements
-        if not name_statements_merged:
-            print("Note: Compatible (id, name) statements were not merged")
+        # Verify compatible statements were merged
+        self.assertTrue(
+            name_statements_merged, "Compatible name statements were not merged"
+        )
 
 
 if __name__ == "__main__":

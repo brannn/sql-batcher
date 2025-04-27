@@ -339,120 +339,64 @@ class SQLBatcher:
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
     ) -> List[Any]:
         """
-        Process a batch of SQL statements.
+        Process a batch of statements.
 
         Args:
             statements: List of SQL statements to process
-            execute_func: Optional custom function to execute SQL
+            execute_func: Optional function to execute SQL statements
 
         Returns:
             List of results from executed statements
         """
-        if not self._batch_mode:
-            return self.process_statements(statements, execute_func)
-
-        # Collect all statements
-        for statement in statements:
-            self._collector.collect(statement)
-
-        # Get the batch
-        batch = self._collector.get_batch()
-        if not batch:
+        if not statements:
             return []
 
-        # Execute the batch
-        if execute_func:
-            result = execute_func(batch)
-        else:
-            result = self._adapter.execute(batch)
+        # Use provided execute function or adapter's execute method
+        execute_callback = execute_func or self._adapter.execute
 
-        # Reset the collector
-        self._collector.reset()
-
-        return [result]
+        # Process statements and return results
+        return self.process_statements(statements, execute_callback)
 
     def process_stream(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
     ) -> List[Any]:
         """
-        Process a stream of SQL statements.
+        Process statements in streaming mode.
 
         Args:
             statements: List of SQL statements to process
-            execute_func: Optional custom function to execute SQL
+            execute_func: Optional function to execute SQL statements
 
         Returns:
             List of results from executed statements
         """
-        results = []
-        for statement in statements:
-            # Collect the statement
-            self._collector.collect(statement)
+        if not statements:
+            return []
 
-            # Execute if batch is full
-            if self._collector.get_current_size() >= self.get_adjusted_max_bytes():
-                # Get the batch
-                batch = self._collector.get_batch()
-                if batch:
-                    # Execute the batch
-                    if execute_func:
-                        result = execute_func(batch)
-                    else:
-                        result = self._adapter.execute(batch)
-                    results.append(result)
+        # Use provided execute function or adapter's execute method
+        execute_callback = execute_func or self._adapter.execute
 
-                # Reset the collector
-                self._collector.reset()
-
-        # Process any remaining statements
-        if self._collector.get_current_size() > 0:
-            # Get the batch
-            batch = self._collector.get_batch()
-            if batch:
-                # Execute the batch
-                if execute_func:
-                    result = execute_func(batch)
-                else:
-                    result = self._adapter.execute(batch)
-                results.append(result)
-
-            # Reset the collector
-            self._collector.reset()
-
-        return results
+        # Process statements and return results
+        return self.process_statements(statements, execute_callback)
 
     def process_chunk(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
     ) -> List[Any]:
         """
-        Process a chunk of SQL statements.
+        Process statements in chunks.
 
         Args:
             statements: List of SQL statements to process
-            execute_func: Optional custom function to execute SQL
+            execute_func: Optional function to execute SQL statements
 
         Returns:
             List of results from executed statements
         """
-        if not self._batch_mode:
-            return self.process_statements(statements, execute_func)
-
-        # Collect all statements
-        for statement in statements:
-            self._collector.collect(statement)
-
-        # Get the batch
-        batch = self._collector.get_batch()
-        if not batch:
+        if not statements:
             return []
 
-        # Execute the batch
-        if execute_func:
-            result = execute_func(batch)
-        else:
-            result = self._adapter.execute(batch)
+        # Use provided execute function or adapter's execute method
+        execute_callback = execute_func or self._adapter.execute
 
-        # Reset the collector
-        self._collector.reset()
-
-        return [result]
+        # Process statements and return results
+        return self.process_statements(statements, execute_callback)
