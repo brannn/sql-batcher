@@ -74,7 +74,7 @@ def test_trino_session_properties(mocker: Any) -> None:
     connection, cursor = setup_mock_trino_connection(mocker)
     session_properties = {"query_max_memory": "1GB", "query_max_run_time": "1h"}
 
-    adapter = TrinoAdapter(
+    TrinoAdapter(
         host="localhost", port=8080, user="test", session_properties=session_properties
     )
 
