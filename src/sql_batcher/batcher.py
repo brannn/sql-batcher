@@ -338,7 +338,9 @@ class SQLBatcher:
         execute_callback = execute_func or self._adapter.execute
 
         # Process statements and return results
-        return self.process_statements(statements, execute_callback)
+        results: List[Any] = []
+        self.process_statements(statements, execute_callback)
+        return results
 
     def process_stream(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
@@ -360,7 +362,9 @@ class SQLBatcher:
         execute_callback = execute_func or self._adapter.execute
 
         # Process statements and return results
-        return self.process_statements(statements, execute_callback)
+        results: List[Any] = []
+        self.process_statements(statements, execute_callback)
+        return results
 
     def process_chunk(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
@@ -382,4 +386,6 @@ class SQLBatcher:
         execute_callback = execute_func or self._adapter.execute
 
         # Process statements and return results
-        return self.process_statements(statements, execute_callback)
+        results: List[Any] = []
+        self.process_statements(statements, execute_callback)
+        return results
