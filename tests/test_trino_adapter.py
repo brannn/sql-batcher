@@ -263,7 +263,7 @@ class TestTrinoAdapter:
             schema="test_schema",
             http_headers={"X-Trino-Client-Info": "sql-batcher-test"},
         )
-
+        assert adapter_with_headers is not None
         # Verify the connection was created with the HTTP headers
         call_kwargs = self.mock_trino.connect.call_args_list[1].kwargs
         assert call_kwargs["http_headers"] == {
