@@ -6,7 +6,7 @@ batching SQL statements based on size limits.
 """
 
 import re
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from sql_batcher.insert_merger import InsertMerger
 from sql_batcher.query_collector import QueryCollector
