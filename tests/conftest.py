@@ -11,7 +11,8 @@ import pytest
 
 # Define test markers
 def pytest_configure(config: Any) -> None:
-    """Configure pytest with custom markers."""
+    """Configure pytest with custom markers and options."""
+    # Add markers
     config.addinivalue_line(
         "markers", "core: tests that don't require database connections"
     )
@@ -32,6 +33,45 @@ def pytest_configure(config: Any) -> None:
     )
     config.addinivalue_line(
         "markers", "spark: tests that require Spark database connections"
+    )
+
+    # Add command-line options
+    config.addinivalue_line(
+        "addopts", "--postgres --snowflake --trino --bigquery --spark"
+    )
+
+
+def pytest_addoption(parser: Any) -> None:
+    """Add command-line options for database tests."""
+    parser.addoption(
+        "--postgres",
+        action="store_true",
+        default=False,
+        help="Run PostgreSQL tests",
+    )
+    parser.addoption(
+        "--snowflake",
+        action="store_true",
+        default=False,
+        help="Run Snowflake tests",
+    )
+    parser.addoption(
+        "--trino",
+        action="store_true",
+        default=False,
+        help="Run Trino tests",
+    )
+    parser.addoption(
+        "--bigquery",
+        action="store_true",
+        default=False,
+        help="Run BigQuery tests",
+    )
+    parser.addoption(
+        "--spark",
+        action="store_true",
+        default=False,
+        help="Run Spark tests",
     )
 
 
