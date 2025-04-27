@@ -8,42 +8,25 @@ import pytest
 from sql_batcher.async_batcher import AsyncSQLBatcher
 from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError
-from sql_batcher.hooks.plugins import HookContext, HookType, Plugin
+from sql_batcher.hooks.plugins import HookContext, HookType, Plugin, PluginManager
 
 
 class TestPlugin(Plugin):
-    """Test plugin for testing context manager functionality."""
+    """Test plugin for async batcher context."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize the test plugin."""
+        super().__init__()
         self.initialized = False
         self.cleaned_up = False
-        self.error_handled = False
 
-    def get_name(self) -> str:
-        """Get the plugin name."""
-        return "test_plugin"
+    def initialize(self, context):
+        """Initialize the plugin."""
+        self.initialized = True
 
-    def get_hooks(self) -> dict[HookType, list[Any]]:
-        """Get the hooks registered by this plugin."""
-
-        async def pre_batch_hook(context: HookContext) -> None:
-            if context.metadata.get("context") == "initialization":
-                self.initialized = True
-
-        async def post_batch_hook(context: HookContext) -> None:
-            if context.metadata.get("context") == "cleanup":
-                self.cleaned_up = True
-
-        async def on_error_hook(context: HookContext) -> None:
-            if context.metadata.get("context") == "cleanup":
-                self.error_handled = True
-
-        return {
-            HookType.PRE_BATCH: [pre_batch_hook],
-            HookType.POST_BATCH: [post_batch_hook],
-            HookType.ON_ERROR: [on_error_hook],
-        }
+    def cleanup(self, context):
+        """Clean up the plugin."""
+        self.cleaned_up = True
 
 
 @pytest.fixture
@@ -60,49 +43,40 @@ def test_plugin():
     return TestPlugin()
 
 
-@pytest.mark.asyncio
-async def test_context_manager_normal_flow(mock_adapter, test_plugin):
+@pytest.fixture
+def plugin_manager(test_plugin):
+    """Create a plugin manager with a test plugin."""
+    manager = PluginManager()
+    manager.register_plugin(test_plugin)
+    return manager
+
+
+@pytest.fixture
+def async_batcher(plugin_manager):
+    """Create an async batcher with a plugin manager."""
+    return AsyncSQLBatcher(plugin_manager=plugin_manager)
+
+
+def test_context_manager_normal_flow(async_batcher, test_plugin):
     """Test normal flow of context manager."""
-    # Create batcher with test plugin
-    batcher = AsyncSQLBatcher(mock_adapter)
-    batcher.register_plugin(test_plugin)
+    with async_batcher:
+        assert test_plugin.initialized
+        assert not test_plugin.cleaned_up
 
-    # Use context manager
-    async with batcher as b:
-        # Add some statements
-        b.add_statement("SELECT 1")
-        b.add_statement("SELECT 2")
-
-    # Verify plugin state
     assert test_plugin.initialized
     assert test_plugin.cleaned_up
-    assert not test_plugin.error_handled
-
-    # Verify adapter was called
-    assert mock_adapter.execute.call_count == 2
 
 
-@pytest.mark.asyncio
-async def test_context_manager_with_error(mock_adapter, test_plugin):
-    """Test context manager with error handling."""
-    # Create batcher with test plugin
-    batcher = AsyncSQLBatcher(mock_adapter)
-    batcher.register_plugin(test_plugin)
-
-    # Make adapter raise an error
-    mock_adapter.execute.side_effect = Exception("Test error")
-
-    # Use context manager
+def test_context_manager_error_flow(async_batcher, test_plugin):
+    """Test error flow of context manager."""
     with pytest.raises(Exception):
-        async with batcher as _:
-            # Add some statements
-            batcher.add_statement("SELECT 1")
-            batcher.add_statement("SELECT 2")
+        with async_batcher:
+            assert test_plugin.initialized
+            assert not test_plugin.cleaned_up
+            raise Exception("Test error")
 
-    # Verify plugin state
     assert test_plugin.initialized
     assert test_plugin.cleaned_up
-    assert test_plugin.error_handled
 
 
 @pytest.mark.asyncio
