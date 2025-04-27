@@ -6,6 +6,20 @@
 
 A Python library for managing large volumes of SQL statements by batching them according to size limits. SQL Batcher helps handle database operations that exceed query size or memory constraints by grouping statements into appropriately sized batches.
 
+## Database Support
+
+| Database | Query Size Limit | Dedicated Adapter | Notes |
+|----------|-----------------|-------------------|-------|
+| PostgreSQL | 1GB | ✅ | Default limit can be increased |
+| Snowflake | 100MB | ✅ | Varies by warehouse size |
+| Trino | 1GB | ✅ | Configurable via `query.max-size` |
+| BigQuery | 1MB (interactive)<br>20MB (batch) | ✅ | Different limits for interactive/batch |
+| Spark | 1GB | ✅ | Configurable via `spark.sql.maxQuerySize` |
+| MySQL | 1GB | ❌ | Configurable via `max_allowed_packet` |
+| SQLite | 1GB | ❌ | Limited by available memory |
+| Oracle | 2GB | ❌ | Configurable via `MAX_STRING_SIZE` |
+| SQL Server | 2GB | ❌ | Configurable via `max text repl size` |
+
 ## What SQL Batcher Does
 
 SQL Batcher provides:
