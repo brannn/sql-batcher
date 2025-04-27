@@ -171,4 +171,4 @@ class QueryCollector:
         """Reset the collector state."""
         self._batch = []
         self._current_size = 0
-        self._metadata = {} 
+        self._metadata = {}

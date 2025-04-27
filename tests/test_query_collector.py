@@ -82,4 +82,4 @@ def test_query_collector_reset():
     collector.reset()
     assert collector.get_batch() == []
     assert collector.get_current_size() == 0
-    assert collector.get_metadata() == {} 
+    assert collector.get_metadata() == {}

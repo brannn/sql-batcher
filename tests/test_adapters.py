@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sql_batcher.adapters.base import SQLAdapter, AsyncSQLAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
 
 T = TypeVar("T")

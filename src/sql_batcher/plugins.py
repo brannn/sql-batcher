@@ -128,4 +128,4 @@ class PluginManager:
                 if asyncio.iscoroutinefunction(hook):
                     await hook(statements, metadata, error)
                 else:
-                    hook(statements, metadata, error) 
+                    hook(statements, metadata, error)

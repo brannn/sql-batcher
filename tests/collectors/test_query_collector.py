@@ -1,9 +1,10 @@
 """Tests for the QueryCollector class."""
 
-import pytest
 from typing import Dict, List, Optional
 
-from sql_batcher.collectors.query_collector import QueryCollector, ListQueryCollector
+import pytest
+
+from sql_batcher.collectors.query_collector import ListQueryCollector, QueryCollector
 from sql_batcher.exceptions import QueryCollectorError
 
 
@@ -183,4 +184,4 @@ class TestListQueryCollector:
         # Test ListQueryCollector specific method
         queries = collector.get_queries()
         assert len(queries) == 1
-        assert queries[0]["query"] == "SELECT 1" 
+        assert queries[0]["query"] == "SELECT 1"

@@ -133,7 +133,9 @@ class AsyncPostgreSQLAdapter(AsyncSQLAdapter):
             async with self.pool.acquire() as conn:
                 await conn.execute(f"SAVEPOINT {name}")
         except Exception as e:
-            raise AdapterExecutionError("PostgreSQL", f"SAVEPOINT {name}", str(e)) from e
+            raise AdapterExecutionError(
+                "PostgreSQL", f"SAVEPOINT {name}", str(e)
+            ) from e
 
     async def rollback_to_savepoint(self, name: str) -> None:
         """Rollback to a previously created savepoint.
@@ -148,7 +150,9 @@ class AsyncPostgreSQLAdapter(AsyncSQLAdapter):
             async with self.pool.acquire() as conn:
                 await conn.execute(f"ROLLBACK TO SAVEPOINT {name}")
         except Exception as e:
-            raise AdapterExecutionError("PostgreSQL", f"ROLLBACK TO SAVEPOINT {name}", str(e)) from e
+            raise AdapterExecutionError(
+                "PostgreSQL", f"ROLLBACK TO SAVEPOINT {name}", str(e)
+            ) from e
 
     async def release_savepoint(self, name: str) -> None:
         """Release a previously created savepoint.
@@ -163,4 +167,6 @@ class AsyncPostgreSQLAdapter(AsyncSQLAdapter):
             async with self.pool.acquire() as conn:
                 await conn.execute(f"RELEASE SAVEPOINT {name}")
         except Exception as e:
-            raise AdapterExecutionError("PostgreSQL", f"RELEASE SAVEPOINT {name}", str(e)) from e
+            raise AdapterExecutionError(
+                "PostgreSQL", f"RELEASE SAVEPOINT {name}", str(e)
+            ) from e

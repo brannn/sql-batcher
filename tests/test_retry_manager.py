@@ -1,12 +1,13 @@
 """Tests for the RetryManager class."""
 
 import asyncio
-import pytest
 from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock
 
-from sql_batcher.retry_manager import RetryManager
+import pytest
+
 from sql_batcher.exceptions import RetryError
+from sql_batcher.retry_manager import RetryManager
 
 
 class TestRetryManager:
@@ -40,7 +41,7 @@ class TestRetryManager:
         mock_operation.side_effect = [
             Exception("First attempt"),
             Exception("Second attempt"),
-            "success"
+            "success",
         ]
         result = await retry_manager.execute_with_retry(mock_operation)
         assert result == "success"
@@ -60,25 +61,20 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_timeout(self, retry_manager: RetryManager) -> None:
         """Test operation timeout."""
+
         async def slow_operation() -> str:
             await asyncio.sleep(1)
             return "success"
 
         with pytest.raises(asyncio.TimeoutError):
-            await retry_manager.execute_with_retry(
-                slow_operation,
-                timeout=0.1
-            )
+            await retry_manager.execute_with_retry(slow_operation, timeout=0.1)
 
     @pytest.mark.asyncio
     async def test_retry_delay(
         self, retry_manager: RetryManager, mock_operation: AsyncMock
     ) -> None:
         """Test retry delay between attempts."""
-        mock_operation.side_effect = [
-            Exception("First attempt"),
-            "success"
-        ]
+        mock_operation.side_effect = [Exception("First attempt"), "success"]
         start_time = asyncio.get_event_loop().time()
         await retry_manager.execute_with_retry(mock_operation)
         end_time = asyncio.get_event_loop().time()
@@ -110,18 +106,11 @@ class TestRetryManager:
         """Test operation execution with arguments."""
         mock_operation.return_value = "success"
         result = await retry_manager.execute_with_retry(
-            mock_operation,
-            "arg1",
-            "arg2",
-            kwarg1="value1",
-            kwarg2="value2"
+            mock_operation, "arg1", "arg2", kwarg1="value1", kwarg2="value2"
         )
         assert result == "success"
         mock_operation.assert_called_once_with(
-            "arg1",
-            "arg2",
-            kwarg1="value1",
-            kwarg2="value2"
+            "arg1", "arg2", kwarg1="value1", kwarg2="value2"
         )
 
     @pytest.mark.asyncio
@@ -132,8 +121,8 @@ class TestRetryManager:
         mock_operation.side_effect = [
             ValueError("First error"),
             TypeError("Second error"),
-            "success"
+            "success",
         ]
         result = await retry_manager.execute_with_retry(mock_operation)
         assert result == "success"
-        assert mock_operation.call_count == 3 
+        assert mock_operation.call_count == 3

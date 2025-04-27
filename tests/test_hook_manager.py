@@ -1,11 +1,12 @@
 """Tests for the HookManager class."""
 
-import pytest
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from sql_batcher.hook_manager import HookManager
-from sql_batcher.hooks import Plugin, HookType, HookContext
+from sql_batcher.hooks import HookContext, HookType, Plugin
 
 
 class TestPlugin(Plugin):
@@ -25,6 +26,7 @@ class TestPlugin(Plugin):
 
     def get_hooks(self) -> Dict[HookType, List[Any]]:
         """Get the hooks registered by this plugin."""
+
         async def pre_batch_hook(context: HookContext) -> None:
             self.pre_batch_called = True
 
@@ -125,12 +127,7 @@ class TestHookManager:
 
         # Test on-error hook
         error = Exception("Test error")
-        await hook_manager.execute_hooks(
-            HookType.ON_ERROR,
-            statements,
-            metadata,
-            error
-        )
+        await hook_manager.execute_hooks(HookType.ON_ERROR, statements, metadata, error)
         assert test_plugin.on_error_called
 
     @pytest.mark.asyncio
@@ -161,6 +158,7 @@ class TestHookManager:
     @pytest.mark.asyncio
     async def test_hook_error_handling(self, hook_manager: HookManager) -> None:
         """Test error handling in hooks."""
+
         # Create plugin with failing hook
         class FailingPlugin(Plugin):
             def get_name(self) -> str:
@@ -184,6 +182,7 @@ class TestHookManager:
     @pytest.mark.asyncio
     async def test_hook_context(self, hook_manager: HookManager) -> None:
         """Test hook context creation and usage."""
+
         # Create plugin that modifies context
         class ContextModifyingPlugin(Plugin):
             def get_name(self) -> str:
@@ -209,4 +208,4 @@ class TestHookManager:
         # Check context modifications
         assert metadata["modified"]
         assert len(statements) == 2
-        assert "SELECT 2" in statements 
+        assert "SELECT 2" in statements

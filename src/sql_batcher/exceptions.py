@@ -122,3 +122,9 @@ class ExecutorError(SQLBatcherError):
     """Raised when there is an error in the executor."""
 
     pass
+
+
+class InsertMergerError(SQLBatcherError):
+    """Raised when there is an error in the insert merger."""
+
+    pass

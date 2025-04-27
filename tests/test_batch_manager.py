@@ -1,7 +1,8 @@
 """Tests for the BatchManager class."""
 
-import pytest
 from typing import List
+
+import pytest
 
 from sql_batcher.batch_manager import BatchManager
 from sql_batcher.exceptions import BatchError
@@ -80,9 +81,7 @@ class TestBatchManager:
         """Test column-aware batch size adjustment."""
         # Create manager with column-aware adjustment
         manager = BatchManager(
-            max_bytes=1000,
-            auto_adjust_for_columns=True,
-            reference_column_count=2
+            max_bytes=1000, auto_adjust_for_columns=True, reference_column_count=2
         )
 
         # Add statement with more columns
@@ -135,4 +134,4 @@ class TestBatchManager:
             batch_manager.add_statement(stmt)
 
         assert len(batch_manager.current_batch) == expected_count
-        assert batch_manager.current_size > 0 
+        assert batch_manager.current_size > 0

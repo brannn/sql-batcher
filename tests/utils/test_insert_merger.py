@@ -1,13 +1,14 @@
 """Tests for the InsertMerger class."""
 
-import pytest
-import time
-import psutil
 import os
+import time
 from typing import List
 
-from sql_batcher.utils.insert_merger import InsertMerger
+import psutil
+import pytest
+
 from sql_batcher.exceptions import InsertMergerError
+from sql_batcher.utils.insert_merger import InsertMerger
 
 
 class TestInsertMerger:
@@ -69,8 +70,7 @@ class TestInsertMerger:
         """Test batch size limits."""
         # Create statements that would exceed max_bytes
         statements = [
-            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')"
-            for i in range(100)
+            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')" for i in range(100)
         ]
 
         merged = merger.merge(statements)
@@ -178,15 +178,27 @@ class TestInsertMerger:
 
         merged = merger.merge(statements)
         assert len(merged) == 1
-        assert "{\"key\": \"value\"}" in merged[0]
-        assert "{\"key\": \"value2\"}" in merged[0]
+        assert '{"key": "value"}' in merged[0]
+        assert '{"key": "value2"}' in merged[0]
 
     @pytest.mark.parametrize(
         "statements,expected_count",
         [
             (["INSERT INTO users (id) VALUES (1)"], 1),
-            (["INSERT INTO users (id) VALUES (1)", "INSERT INTO users (id) VALUES (2)"], 1),
-            (["INSERT INTO users (id) VALUES (1)", "INSERT INTO orders (id) VALUES (1)"], 2),
+            (
+                [
+                    "INSERT INTO users (id) VALUES (1)",
+                    "INSERT INTO users (id) VALUES (2)",
+                ],
+                1,
+            ),
+            (
+                [
+                    "INSERT INTO users (id) VALUES (1)",
+                    "INSERT INTO orders (id) VALUES (1)",
+                ],
+                2,
+            ),
         ],
     )
     def test_merge_scenarios(
@@ -199,9 +211,18 @@ class TestInsertMerger:
     def test_malformed_sql(self, merger: InsertMerger) -> None:
         """Test handling of malformed SQL."""
         test_cases = [
-            ["INSERT INTO users (id) VALUES (1", "INSERT INTO users (id) VALUES (2)"],  # Missing closing parenthesis
-            ["INSERT INTO users (id) VALUES '1'", "INSERT INTO users (id) VALUES '2'"],  # Missing parentheses
-            ["INSERT INTO users (id) VALUES (1, 2)", "INSERT INTO users (id) VALUES (3)"],  # Value count mismatch
+            [
+                "INSERT INTO users (id) VALUES (1",
+                "INSERT INTO users (id) VALUES (2)",
+            ],  # Missing closing parenthesis
+            [
+                "INSERT INTO users (id) VALUES '1'",
+                "INSERT INTO users (id) VALUES '2'",
+            ],  # Missing parentheses
+            [
+                "INSERT INTO users (id) VALUES (1, 2)",
+                "INSERT INTO users (id) VALUES (3)",
+            ],  # Value count mismatch
         ]
 
         for statements in test_cases:
@@ -330,8 +351,7 @@ class TestInsertMerger:
         """Test dynamic batch size adjustment."""
         merger = InsertMerger(max_bytes=1000)
         statements = [
-            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')"
-            for i in range(100)
+            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')" for i in range(100)
         ]
 
         # First merge
@@ -349,8 +369,7 @@ class TestInsertMerger:
     def test_batch_size_optimization(self, merger: InsertMerger) -> None:
         """Test batch size optimization."""
         statements = [
-            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')"
-            for i in range(100)
+            f"INSERT INTO users (id, name) VALUES ({i}, 'User {i}')" for i in range(100)
         ]
 
         # Test different max_bytes values
@@ -363,4 +382,6 @@ class TestInsertMerger:
             batch_counts.append(len(merged))
 
         # Verify that batch count decreases as max_bytes increases
-        assert all(batch_counts[i] >= batch_counts[i+1] for i in range(len(batch_counts)-1)) 
+        assert all(
+            batch_counts[i] >= batch_counts[i + 1] for i in range(len(batch_counts) - 1)
+        )

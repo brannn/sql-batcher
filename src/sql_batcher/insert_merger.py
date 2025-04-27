@@ -21,7 +21,9 @@ class InsertMerger:
     def __init__(self) -> None:
         """Initialize the insert merger."""
         self._table_pattern = re.compile(r"INSERT\s+INTO\s+(\w+)", re.IGNORECASE)
-        self._columns_pattern = re.compile(r"INSERT\s+INTO\s+\w+\s*\(([^)]*)\)", re.IGNORECASE)
+        self._columns_pattern = re.compile(
+            r"INSERT\s+INTO\s+\w+\s*\(([^)]*)\)", re.IGNORECASE
+        )
         self._values_pattern = re.compile(r"VALUES\s*\(([^)]*)\)", re.IGNORECASE)
 
     def _extract_table_name(self, statement: str) -> Optional[str]:
@@ -167,4 +169,4 @@ class InsertMerger:
         if current:
             result.append(current)
 
-        return result 
+        return result

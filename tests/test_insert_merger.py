@@ -3,6 +3,7 @@ Tests for the InsertMerger class.
 """
 
 import unittest
+
 import pytest
 
 from sql_batcher.insert_merger import InsertMerger
@@ -197,14 +198,18 @@ def test_insert_merger_extract_table_name():
     """Test extracting table names from INSERT statements."""
     merger = InsertMerger()
     assert merger._extract_table_name("INSERT INTO users VALUES (1)") == "users"
-    assert merger._extract_table_name("INSERT INTO products (id) VALUES (1)") == "products"
+    assert (
+        merger._extract_table_name("INSERT INTO products (id) VALUES (1)") == "products"
+    )
     assert merger._extract_table_name("SELECT * FROM users") is None
 
 
 def test_insert_merger_extract_columns():
     """Test extracting column names from INSERT statements."""
     merger = InsertMerger()
-    assert merger._extract_columns("INSERT INTO users (id, name) VALUES (1, 'John')") == [
+    assert merger._extract_columns(
+        "INSERT INTO users (id, name) VALUES (1, 'John')"
+    ) == [
         "id",
         "name",
     ]
@@ -215,8 +220,13 @@ def test_insert_merger_extract_columns():
 def test_insert_merger_extract_values():
     """Test extracting values from INSERT statements."""
     merger = InsertMerger()
-    assert merger._extract_values("INSERT INTO users VALUES (1, 'John')") == ["1", "'John'"]
-    assert merger._extract_values("INSERT INTO users (id, name) VALUES (1, 'John')") == [
+    assert merger._extract_values("INSERT INTO users VALUES (1, 'John')") == [
+        "1",
+        "'John'",
+    ]
+    assert merger._extract_values(
+        "INSERT INTO users (id, name) VALUES (1, 'John')"
+    ) == [
         "1",
         "'John'",
     ]
@@ -258,7 +268,10 @@ def test_insert_merger_merge():
 
     merged = merger.merge(statements)
     assert len(merged) == 2
-    assert "INSERT INTO users (id, name) VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')" in merged
+    assert (
+        "INSERT INTO users (id, name) VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')"
+        in merged
+    )
     assert "INSERT INTO products (id) VALUES (1)" in merged
 
 

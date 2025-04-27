@@ -2,4 +2,4 @@
 
 from tests.utils.test_insert_merger import TestInsertMerger
 
-__all__ = ["TestInsertMerger"] 
+__all__ = ["TestInsertMerger"]

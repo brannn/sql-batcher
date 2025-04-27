@@ -1,5 +1,8 @@
 """Tests for the collectors package."""
 
-from tests.collectors.test_query_collector import TestQueryCollector, TestListQueryCollector
+from tests.collectors.test_query_collector import (
+    TestListQueryCollector,
+    TestQueryCollector,
+)
 
-__all__ = ["TestQueryCollector", "TestListQueryCollector"] 
+__all__ = ["TestQueryCollector", "TestListQueryCollector"]
