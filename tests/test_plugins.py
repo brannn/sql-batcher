@@ -1,16 +1,16 @@
 """Test plugins."""
 
-import pytest
-
-from sql_batcher.plugins import Plugin, PluginManager
-
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from sql_batcher.plugins import (
     HookContext,
     HookType,
     MetricsCollector,
+    Plugin,
+    PluginManager,
     QueryLogger,
     SQLPreprocessor,
 )
