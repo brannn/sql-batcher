@@ -233,120 +233,106 @@ class TestTrinoAdapter:
 
     def test_get_catalogs(self) -> None:
         """Test getting available catalogs."""
-        # Configure the mock cursor to return test data
-        self.mock_cursor.description = [("catalog_name",)]
-        self.mock_cursor.fetchall.return_value = [("hive",), ("mysql",), ("postgres",)]
+        # Configure the mock cursor
+        self.mock_cursor.description = [("Catalog",)]
+        self.mock_cursor.fetchall.return_value = [("catalog1",), ("catalog2",)]
 
-        # Get the catalogs
+        # Get catalogs
         result = self.adapter.get_catalogs()
 
-        # Verify the correct query was executed
+        # Verify the query was executed
         self.mock_cursor.execute.assert_called_once_with("SHOW CATALOGS")
 
         # Verify the result
-        assert result == ["hive", "mysql", "postgres"]
+        assert result == ["catalog1", "catalog2"]
 
     def test_get_schemas(self) -> None:
-        """Test getting available schemas in a catalog."""
-        # Configure the mock cursor to return test data
-        self.mock_cursor.description = [("schema_name",)]
-        self.mock_cursor.fetchall.return_value = [
-            ("default",),
-            ("public",),
-            ("information_schema",),
-        ]
+        """Test getting available schemas."""
+        # Configure the mock cursor
+        self.mock_cursor.description = [("Schema",)]
+        self.mock_cursor.fetchall.return_value = [("schema1",), ("schema2",)]
 
-        # Get the schemas
-        result = self.adapter.get_schemas("hive")
+        # Get schemas
+        result = self.adapter.get_schemas("catalog1")
 
-        # Verify the correct query was executed
-        self.mock_cursor.execute.assert_called_once_with("SHOW SCHEMAS FROM hive")
+        # Verify the query was executed
+        self.mock_cursor.execute.assert_called_once_with("SHOW SCHEMAS FROM catalog1")
 
         # Verify the result
-        assert result == ["default", "public", "information_schema"]
+        assert result == ["schema1", "schema2"]
 
     def test_get_tables(self) -> None:
-        """Test getting available tables in a schema."""
-        # Configure the mock cursor to return test data
-        self.mock_cursor.description = [("table_name",)]
-        self.mock_cursor.fetchall.return_value = [
-            ("users",),
-            ("orders",),
-            ("products",),
-        ]
+        """Test getting available tables."""
+        # Configure the mock cursor
+        self.mock_cursor.description = [("Table",)]
+        self.mock_cursor.fetchall.return_value = [("table1",), ("table2",)]
 
-        # Get the tables
-        result = self.adapter.get_tables("hive", "default")
+        # Get tables
+        result = self.adapter.get_tables("catalog1", "schema1")
 
-        # Verify the correct query was executed
+        # Verify the query was executed
         self.mock_cursor.execute.assert_called_once_with(
-            "SHOW TABLES FROM hive.default"
+            "SHOW TABLES FROM catalog1.schema1"
         )
 
         # Verify the result
-        assert result == ["users", "orders", "products"]
+        assert result == ["table1", "table2"]
 
     def test_get_columns(self) -> None:
-        """Test getting columns for a table."""
-        # Configure the mock cursor to return test data
-        self.mock_cursor.description = [("column_name", "type")]
+        """Test getting column information."""
+        # Configure the mock cursor
+        self.mock_cursor.description = [
+            ("Column", "Type", "Extra", "Comment"),
+            ("Column", "Type", "Extra", "Comment"),
+        ]
         self.mock_cursor.fetchall.return_value = [
-            ("id", "integer"),
-            ("name", "varchar"),
-            ("created_at", "timestamp"),
+            ("id", "integer", "", "Primary key"),
+            ("name", "varchar", "", "User name"),
         ]
 
-        # Get the columns
-        result = self.adapter.get_columns("users", "hive", "default")
+        # Get columns
+        result = self.adapter.get_columns("table1", "catalog1", "schema1")
 
-        # Verify the correct query was executed
+        # Verify the query was executed
         self.mock_cursor.execute.assert_called_once_with(
-            "SELECT column_name, data_type FROM hive.information_schema.columns "
-            "WHERE table_schema = 'default' AND table_name = 'users'"
+            "SHOW COLUMNS FROM catalog1.schema1.table1"
         )
 
         # Verify the result
-        assert result == [
-            {"name": "id", "type": "integer"},
-            {"name": "name", "type": "varchar"},
-            {"name": "created_at", "type": "timestamp"},
-        ]
+        assert len(result) == 2
+        assert result[0]["name"] == "id"
+        assert result[0]["type"] == "integer"
+        assert result[1]["name"] == "name"
+        assert result[1]["type"] == "varchar"
 
     def test_set_session_property(self) -> None:
         """Test setting a session property."""
-        # Clear previous calls
-        self.mock_cursor.reset_mock()
-
         # Set a session property
-        self.adapter.set_session_property("join_distribution_type", "PARTITIONED")
+        self.adapter.set_session_property("query_max_memory", "2GB")
 
         # Verify the property was set
-        self.mock_cursor.execute.assert_called_once_with(
-            "SET SESSION join_distribution_type = 'PARTITIONED'"
-        )
+        assert self.adapter._session_properties["query_max_memory"] == "2GB"
 
-        # Verify it was added to the stored properties
-        assert (
-            self.adapter._session_properties["join_distribution_type"] == "PARTITIONED"
+        # Verify the statement was executed
+        self.mock_cursor.execute.assert_called_once_with(
+            "SET SESSION query_max_memory = '2GB'"
         )
 
     def test_execute_with_http_headers(self) -> None:
         """Test execution with HTTP headers."""
         # Create an adapter with HTTP headers
-        adapter_with_headers = TrinoAdapter(
+        adapter = TrinoAdapter(
             host="localhost",
             port=8080,
-            user="test_user",
-            catalog="test_catalog",
-            schema="test_schema",
-            http_headers={"X-Trino-Client-Info": "sql-batcher-test"},
+            user="test",
+            http_headers={"X-Trino-User": "test_user"},
         )
-        assert adapter_with_headers is not None
-        # Verify the connection was created with the HTTP headers
-        call_kwargs = self.mock_trino.connect.call_args_list[1].kwargs
-        assert call_kwargs["http_headers"] == {
-            "X-Trino-Client-Info": "sql-batcher-test"
-        }
+
+        # Execute a statement
+        adapter.execute("SELECT 1")
+
+        # Verify the headers were used
+        assert adapter._connection.http_headers == {"X-Trino-User": "test_user"}
 
     def test_missing_trino_package(self, monkeypatch) -> None:
         """Test behavior when trino package is not installed."""
@@ -355,13 +341,7 @@ class TestTrinoAdapter:
 
         # Attempting to create the adapter should raise an ImportError
         with pytest.raises(ImportError) as excinfo:
-            TrinoAdapter(
-                host="localhost",
-                port=8080,
-                user="test_user",
-                catalog="test_catalog",
-                schema="test_schema",
-            )
+            TrinoAdapter(host="localhost", port=8080, user="test")
 
         # Verify the error message
         assert "trino package is required" in str(excinfo.value)

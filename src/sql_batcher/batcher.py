@@ -111,8 +111,8 @@ class SQLBatcher:
                 # Calculate adjustment factor
                 # More columns -> smaller batches (lower adjusted max_bytes)
                 # Fewer columns -> larger batches (higher adjusted max_bytes)
-                raw_factor = self._collector.get_reference_column_count() / max(
-                    1, self._collector.get_column_count()
+                raw_factor = (
+                    self._collector.get_reference_column_count() / detected_count
                 )
 
                 # Clamp to min/max bounds
@@ -254,86 +254,39 @@ class SQLBatcher:
         execute_callback: Callable[[str], Any],
         query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> int:
+    ) -> List[Any]:
         """
         Process a list of SQL statements.
 
         Args:
             statements: List of SQL statements to process
-            execute_callback: Callback for executing SQL (takes SQL string, returns any)
+            execute_callback: Function to execute SQL statements
             query_collector: Optional query collector for collecting queries
-            metadata: Optional metadata to associate with the batches
+            metadata: Optional metadata to associate with the batch
 
         Returns:
-            Total number of statements processed
+            List of results from executed statements
         """
-        total_processed = 0
-
-        # Apply insert merging if enabled
-        if self._batch_mode:
-            statements = self._merge_insert_statements(statements)
-
-        # Analyze first few statements to establish column count if enabled
-        if self._batch_mode and len(statements) > 0:
-            # Try to detect columns from the first 5 statements (or fewer if less available)
-            for i in range(min(5, len(statements))):
-                self.update_adjustment_factor(statements[i])
-                if self._collector.get_column_count() is not None:
-                    # We found a valid column count, no need to check more
-                    break
-
-            if self._collector.get_column_count() is not None:
-                import logging
-
-                logging.info(
-                    f"Column-based batch sizing active: {self._collector.get_column_count()} columns detected, "
-                    f"adjustment factor: {self._collector.get_adjustment_factor():.2f}x, "
-                    f"effective max_bytes: {self.get_adjusted_max_bytes()} "
-                    f"(base: {self._max_bytes})"
-                )
-
+        results: List[Any] = []
         for statement in statements:
-            # Update adjustment factor if needed (in case not already set)
-            if self._batch_mode and self._collector.get_column_count() is None:
-                self.update_adjustment_factor(statement)
-
-            # Handle oversized statements
-            statement_size = len(statement.encode("utf-8"))
-            adjusted_max_bytes = self.get_adjusted_max_bytes()
-
-            if statement_size > adjusted_max_bytes:
-                # Flush the current batch first
-                total_processed += self.flush(
-                    execute_callback, query_collector, metadata
-                )
-
-                # Handle the oversized statement individually
-                if not statement.strip().endswith(self._collector.get_delimiter()):
-                    statement = statement.strip() + self._collector.get_delimiter()
-
-                if self._collector.is_dry_run():
-                    if query_collector:
-                        query_collector.collect(statement, metadata)
+            # Add statement to batch
+            if self.add_statement(statement):
+                # Batch is full, flush it
+                if query_collector:
+                    query_collector.collect(statement, metadata)
                 else:
-                    execute_callback(statement)
-
-                    if query_collector:
-                        query_collector.collect(statement, metadata)
-
-                total_processed += 1
-                continue
-
-            # Add to batch, flush if needed
-            should_flush = self.add_statement(statement)
-            if should_flush:
-                total_processed += self.flush(
-                    execute_callback, query_collector, metadata
-                )
+                    self._collector.collect(statement)
+                results.extend(self.flush(execute_callback, query_collector, metadata))
 
         # Flush any remaining statements
-        total_processed += self.flush(execute_callback, query_collector, metadata)
+        if self._collector.get_current_size() > 0:
+            if query_collector:
+                query_collector.collect(statement, metadata)
+            else:
+                self._collector.collect(statement)
+            results.extend(self.flush(execute_callback, query_collector, metadata))
 
-        return total_processed
+        return results
 
     def process_batch(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None

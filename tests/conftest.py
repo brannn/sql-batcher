@@ -10,7 +10,7 @@ import pytest
 
 
 # Define test markers
-def pytest_configure(config) -> None:
+def pytest_configure(config: Any) -> None:
     """Configure pytest with custom markers."""
     config.addinivalue_line(
         "markers", "core: tests that don't require database connections"
@@ -191,7 +191,7 @@ def spark_connection_params() -> Dict[str, str]:
 
 
 # Skip database tests if connection not available
-def pytest_collection_modifyitems_skip(config, items) -> None:
+def pytest_collection_modifyitems_skip(config: Any, items: List[Any]) -> None:
     """Skip tests based on markers and available connections."""
     skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
     skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")
@@ -200,40 +200,24 @@ def pytest_collection_modifyitems_skip(config, items) -> None:
     skip_spark = pytest.mark.skip(reason="Spark connection not available")
 
     for item in items:
-        # Skip tests based on database connection availability
-        if "postgres" in item.keywords and not has_postgres_connection():
+        if "test_postgresql_adapter" in item.nodeid and not has_postgres_connection():
             item.add_marker(skip_postgres)
-        if "snowflake" in item.keywords and not has_snowflake_connection():
+        elif "test_snowflake_adapter" in item.nodeid and not has_snowflake_connection():
             item.add_marker(skip_snowflake)
-        if "trino" in item.keywords and not has_trino_connection():
+        elif "test_trino_adapter" in item.nodeid and not has_trino_connection():
             item.add_marker(skip_trino)
-        if "bigquery" in item.keywords and not has_bigquery_connection():
+        elif "test_bigquery_adapter" in item.nodeid and not has_bigquery_connection():
             item.add_marker(skip_bigquery)
-        if "spark" in item.keywords and not has_spark_connection():
+        elif "test_spark_adapter" in item.nodeid and not has_spark_connection():
             item.add_marker(skip_spark)
 
 
-# Generic database connection fixture
 @pytest.fixture
-def mock_db_connection() -> None:
-    """Mock database connection for generic adapter tests."""
-    conn = MagicMock()
-    cursor = MagicMock()
-    conn.cursor.return_value = cursor
-
-    # Mock cursor.execute to return result sets for SELECT statements
-    def side_effect(sql, *args, **kwargs):
-        if sql.strip().upper().startswith("SELECT"):
-            cursor.description = [("id",), ("name",)]
-            cursor.rowcount = 1
-            cursor.fetchall.return_value = [(1, "Test")]
-        return cursor
-
-    cursor.execute.side_effect = side_effect
-
-    # Configure transaction methods
-    conn.commit = MagicMock()
-    conn.rollback = MagicMock()
-    conn.close = MagicMock()
-
-    return conn
+def mock_db_connection() -> MagicMock:
+    """Create a mock database connection."""
+    mock_connection = MagicMock()
+    mock_cursor = MagicMock()
+    mock_connection.cursor.return_value = mock_cursor
+    mock_cursor.description = [("id",), ("name",)]
+    mock_cursor.fetchall.return_value = [(1, "Test")]
+    return mock_connection

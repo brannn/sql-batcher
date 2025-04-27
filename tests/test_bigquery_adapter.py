@@ -255,7 +255,7 @@ class TestBigQueryAdapter:
             project_id="test-project",
             dataset_id="test_dataset",
             location="US",
-            job_labels={"environment": "test"},
+            labels={"environment": "test"},
         )
 
         # Execute a query
