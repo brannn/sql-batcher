@@ -35,8 +35,9 @@ def pytest_configure(config: Any) -> None:
     )
 
 
-def pytest_collection_modifyitems(items: List[Any]) -> None:
-    """Add markers to tests based on their requirements."""
+def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
+    """Add markers to tests based on their requirements and skip if needed."""
+    # Add markers based on test file names
     for item in items:
         if "test_postgresql_adapter" in item.nodeid:
             item.add_marker(pytest.mark.postgresql)
@@ -48,6 +49,25 @@ def pytest_collection_modifyitems(items: List[Any]) -> None:
             item.add_marker(pytest.mark.bigquery)
         elif "test_spark_adapter" in item.nodeid:
             item.add_marker(pytest.mark.spark)
+
+    # Skip tests based on available connections
+    skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
+    skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")
+    skip_trino = pytest.mark.skip(reason="Trino connection not available")
+    skip_bigquery = pytest.mark.skip(reason="BigQuery connection not available")
+    skip_spark = pytest.mark.skip(reason="Spark connection not available")
+
+    for item in items:
+        if "postgresql" in item.keywords and not config.getoption("--postgres"):
+            item.add_marker(skip_postgres)
+        elif "snowflake" in item.keywords and not config.getoption("--snowflake"):
+            item.add_marker(skip_snowflake)
+        elif "trino" in item.keywords and not config.getoption("--trino"):
+            item.add_marker(skip_trino)
+        elif "bigquery" in item.keywords and not config.getoption("--bigquery"):
+            item.add_marker(skip_bigquery)
+        elif "spark" in item.keywords and not config.getoption("--spark"):
+            item.add_marker(skip_spark)
 
 
 @pytest.fixture(scope="session")
@@ -188,28 +208,6 @@ def spark_connection_params() -> Dict[str, str]:
         "master": os.getenv("SPARK_MASTER", "local[*]"),
         "app_name": os.getenv("SPARK_APP_NAME", "sql_batcher_test"),
     }
-
-
-# Skip database tests if connection not available
-def pytest_collection_modifyitems_skip(config: Any, items: List[Any]) -> None:
-    """Skip tests based on markers and available connections."""
-    skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
-    skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")
-    skip_trino = pytest.mark.skip(reason="Trino connection not available")
-    skip_bigquery = pytest.mark.skip(reason="BigQuery connection not available")
-    skip_spark = pytest.mark.skip(reason="Spark connection not available")
-
-    for item in items:
-        if "test_postgresql_adapter" in item.nodeid and not has_postgres_connection():
-            item.add_marker(skip_postgres)
-        elif "test_snowflake_adapter" in item.nodeid and not has_snowflake_connection():
-            item.add_marker(skip_snowflake)
-        elif "test_trino_adapter" in item.nodeid and not has_trino_connection():
-            item.add_marker(skip_trino)
-        elif "test_bigquery_adapter" in item.nodeid and not has_bigquery_connection():
-            item.add_marker(skip_bigquery)
-        elif "test_spark_adapter" in item.nodeid and not has_spark_connection():
-            item.add_marker(skip_spark)
 
 
 @pytest.fixture
