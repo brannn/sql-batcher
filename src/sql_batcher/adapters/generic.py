@@ -82,7 +82,7 @@ class GenericAdapter(SQLAdapter):
 
             # For SELECT queries, return results
             if cursor.description is not None:
-                return cursor.fetchall()
+                return list(cursor.fetchall())
 
             # For non-SELECT queries (INSERT, UPDATE, DELETE)
             return []

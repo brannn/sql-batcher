@@ -167,11 +167,18 @@ class TestGenericAdapter:
         self.cursor = MagicMock()
 
         # Configure cursor behavior
-        self.cursor.description = [
-            ["id", "INT", None, None, None, None, None],
-            ["name", "VARCHAR", None, None, None, None, None],
-        ]
-        self.cursor.fetchall.return_value = [(1, "Test")]
+        def execute_side_effect(sql: str) -> None:
+            if sql.strip().upper().startswith("SELECT"):
+                self.cursor.description = [
+                    ["id", "INT", None, None, None, None, None],
+                    ["name", "VARCHAR", None, None, None, None, None],
+                ]
+                self.cursor.fetchall.return_value = [(1, "Test")]
+            else:
+                self.cursor.description = None
+                self.cursor.fetchall.return_value = []
+
+        self.cursor.execute.side_effect = execute_side_effect
 
         # Configure connection to return cursor
         self.connection.cursor.return_value = self.cursor
