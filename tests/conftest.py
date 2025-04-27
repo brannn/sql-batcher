@@ -279,12 +279,12 @@ def mock_db_connection() -> MagicMock:
         return None
 
     # Set up the execute method with side effect
-    mock_cursor.execute = MagicMock(side_effect=execute_side_effect)
+    setattr(mock_cursor, "execute", MagicMock(side_effect=execute_side_effect))
 
     # Set up cursor reset
-    mock_cursor.reset_mock = MagicMock(return_value=None)
+    setattr(mock_cursor, "reset_mock", MagicMock(return_value=None))
 
     # Configure connection to return the mock cursor
-    mock_connection.cursor = MagicMock(return_value=mock_cursor)
+    setattr(mock_connection, "cursor", MagicMock(return_value=mock_cursor))
 
     return mock_connection

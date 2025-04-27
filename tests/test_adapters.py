@@ -62,7 +62,7 @@ class TestAdapterImpl(SQLAdapter):
         self._executed_statements.append(sql)
         self.cursor.execute(sql)
         if self.cursor.description is not None:
-            return self.cursor.fetchall()
+            return list(self.cursor.fetchall())
         return []
 
     def close(self) -> None:
