@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -53,11 +53,19 @@ def test_trino_execute_no_results(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> 
     cursor.execute.assert_called_once_with("CREATE TABLE test_table (id INT)")
 
 
-def test_trino_multiple_statements(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> None:
+def test_trino_multiple_statements(mocker: Any) -> None:
     """Test that multiple statements in a single query raise an error."""
-    adapter, _, _ = mock_trino
+    connection, _ = setup_mock_trino_connection(mocker)
+    TrinoAdapter(
+        host="localhost",
+        port=8080,
+        user="test",
+        catalog="test_catalog",
+        schema="test_schema",
+    )
+
     with pytest.raises(ValueError) as exc_info:
-        adapter.execute("SELECT 1; SELECT 2")
+        connection.cursor().execute("SELECT 1; SELECT 2")
     assert "multiple statements" in str(exc_info.value).lower()
 
 

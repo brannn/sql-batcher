@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Tuple
 
 import pytest
 
@@ -95,7 +95,7 @@ def test_pg_isolation_level(mocker: Any) -> None:
 
     connection, _ = setup_mock_pg_connection(mocker)
 
-    adapter = PostgreSQLAdapter(
+    PostgreSQLAdapter(
         connection_params={"host": "localhost", "database": "test"},
         isolation_level="serializable",
     )
@@ -110,7 +110,7 @@ def test_pg_cursor_factory(mocker: Any) -> None:
     connection, _ = setup_mock_pg_connection(mocker)
     mock_factory = mocker.Mock()
 
-    adapter = PostgreSQLAdapter(
+    PostgreSQLAdapter(
         connection_params={"host": "localhost", "database": "test"},
         cursor_factory=mock_factory,
     )
