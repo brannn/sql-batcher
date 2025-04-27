@@ -195,6 +195,9 @@ class SQLBatcher:
     def reset(self) -> None:
         """Reset the current batch."""
         self._collector.reset()
+        # Update public attributes
+        self.current_batch = self._collector.get_batch()
+        self.current_size = self._collector.get_current_size()
 
     def flush(
         self,
@@ -243,8 +246,8 @@ class SQLBatcher:
             self.current_batch = self._collector.get_batch()
             self.current_size = self._collector.get_current_size()
 
-            # Return the result
-            return [result] if result is not None else []
+            # Return the count
+            return [count]
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:
         """
@@ -316,7 +319,8 @@ class SQLBatcher:
                 self.flush(execute_callback, query_collector, metadata) or []
             )
 
-        return results
+        # Return the total count
+        return [len(statements)]
 
     def process_batch(
         self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
