@@ -1,6 +1,5 @@
 """Tests for async adapters."""
 
-from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -1,13 +1,15 @@
-"""Async Snowflake adapter for sql-batcher.
+"""
+Async adapter for Snowflake databases.
 
-This module provides an async adapter for Snowflake databases using snowflake-connector-python.
+This module provides an async adapter for Snowflake databases.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+import asyncio
+from typing import Any, Optional
 
-import snowflake.connector.async_connector as snowflake
+import snowflake.connector
 
-from sql_batcher.adapters.async_base import AsyncSQLAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
 
 
@@ -42,19 +44,23 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
         self.database = database
         self.schema = schema
         self.conn_kwargs = kwargs
-        self.conn: Optional[snowflake.SnowflakeConnection] = None
+        self.conn: Optional[snowflake.connector.SnowflakeConnection] = None
 
     async def connect(self) -> None:
         """Connect to the Snowflake database."""
         try:
-            self.conn = await snowflake.connect(
-                account=self.account,
-                user=self.user,
-                password=self.password,
-                warehouse=self.warehouse,
-                database=self.database,
-                schema=self.schema,
-                **self.conn_kwargs,
+            loop = asyncio.get_running_loop()
+            self.conn = await loop.run_in_executor(
+                None,
+                lambda: snowflake.connector.connect(
+                    account=self.account,
+                    user=self.user,
+                    password=self.password,
+                    warehouse=self.warehouse,
+                    database=self.database,
+                    schema=self.schema,
+                    **self.conn_kwargs,
+                ),
             )
         except Exception as e:
             raise AdapterConnectionError("Snowflake", str(e)) from e
@@ -62,7 +68,8 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
     async def disconnect(self) -> None:
         """Disconnect from the Snowflake database."""
         if self.conn:
-            await self.conn.close()
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.conn.close)
             self.conn = None
 
     async def execute(self, query: str) -> Any:
@@ -81,9 +88,10 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Snowflake", "Not connected to database")
 
         try:
-            cursor = await self.conn.cursor()
-            await cursor.execute(query)
-            return await cursor.fetchall()
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.conn.cursor)
+            await loop.run_in_executor(None, cursor.execute, query)
+            return await loop.run_in_executor(None, cursor.fetchall)
         except Exception as e:
             raise AdapterExecutionError("Snowflake", query, str(e)) from e
 
@@ -93,8 +101,9 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Snowflake", "Not connected to database")
 
         try:
-            cursor = await self.conn.cursor()
-            await cursor.execute("BEGIN")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.conn.cursor)
+            await loop.run_in_executor(None, cursor.execute, "BEGIN")
         except Exception as e:
             raise AdapterExecutionError("Snowflake", "BEGIN", str(e)) from e
 
@@ -104,8 +113,9 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Snowflake", "Not connected to database")
 
         try:
-            cursor = await self.conn.cursor()
-            await cursor.execute("COMMIT")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.conn.cursor)
+            await loop.run_in_executor(None, cursor.execute, "COMMIT")
         except Exception as e:
             raise AdapterExecutionError("Snowflake", "COMMIT", str(e)) from e
 
@@ -115,7 +125,8 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Snowflake", "Not connected to database")
 
         try:
-            cursor = await self.conn.cursor()
-            await cursor.execute("ROLLBACK")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.conn.cursor)
+            await loop.run_in_executor(None, cursor.execute, "ROLLBACK")
         except Exception as e:
             raise AdapterExecutionError("Snowflake", "ROLLBACK", str(e)) from e

@@ -1,14 +1,15 @@
-"""Async BigQuery adapter for sql-batcher.
+"""
+Async adapter for Google BigQuery.
 
-This module provides an async adapter for Google BigQuery using google-cloud-bigquery.
+This module provides an async adapter for Google BigQuery databases.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional
 
 from google.cloud import bigquery
 from google.cloud.bigquery import Client
 
-from sql_batcher.adapters.async_base import AsyncSQLAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
 
 

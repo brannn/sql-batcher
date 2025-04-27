@@ -314,7 +314,9 @@ async def test_async_adapter_execute(async_adapter: TestAsyncAdapterImpl) -> Non
 
 
 @pytest.mark.asyncio
-async def test_async_adapter_max_query_size(async_adapter: TestAsyncAdapterImpl) -> None:
+async def test_async_adapter_max_query_size(
+    async_adapter: TestAsyncAdapterImpl,
+) -> None:
     """Test max query size."""
     assert await async_adapter.get_max_query_size() == 500_000
 

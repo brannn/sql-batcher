@@ -135,13 +135,18 @@ class QueryCollector:
         """
         self._adjustment_factor = factor
 
-    def collect(self, statement: str) -> None:
+    def collect(
+        self, statement: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Add a statement to the current batch.
 
         Args:
             statement: SQL statement to add
+            metadata: Optional metadata to associate with the statement
         """
         self._batch.append(statement)
+        if metadata:
+            self.update_metadata(metadata)
 
     def update_current_size(self, size: int) -> None:
         """Update the current batch size.
@@ -172,3 +177,46 @@ class QueryCollector:
         self._batch = []
         self._current_size = 0
         self._metadata = {}
+
+
+class ListQueryCollector(QueryCollector):
+    """
+    Query collector that maintains a list of executed queries with their metadata.
+
+    This collector is particularly useful for dry runs and testing, as it allows
+    inspection of what queries would have been executed.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the list query collector."""
+        super().__init__(dry_run=True)
+        self._queries: List[Dict[str, Any]] = []
+
+    def collect(
+        self, statement: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Add a statement to the current batch and record it with metadata.
+
+        Args:
+            statement: SQL statement to add
+            metadata: Optional metadata to associate with the statement
+        """
+        super().collect(statement, metadata)
+        self._queries.append(
+            {"statement": statement, "metadata": self.get_metadata().copy()}
+        )
+
+    def get_queries(self) -> List[Dict[str, Any]]:
+        """
+        Get the list of collected queries with their metadata.
+
+        Returns:
+            List of dictionaries containing statements and their metadata
+        """
+        return self._queries
+
+    def reset(self) -> None:
+        """Reset the collector state and clear collected queries."""
+        super().reset()
+        self._queries = []

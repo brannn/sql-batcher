@@ -5,7 +5,6 @@ from typing import List
 import pytest
 
 from sql_batcher.batch_manager import BatchManager
-from sql_batcher.exceptions import BatchError
 
 
 class TestBatchManager:

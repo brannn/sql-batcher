@@ -1,11 +1,13 @@
-"""Tests for AsyncSQLBatcher context manager functionality."""
+"""Tests for async batcher context manager."""
 
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 
 from sql_batcher import AsyncSQLBatcher
 from sql_batcher.adapters.base import AsyncSQLAdapter
+from sql_batcher.exceptions import AdapterConnectionError
 from sql_batcher.plugins import HookContext, HookType, Plugin
 
 
@@ -92,10 +94,10 @@ async def test_context_manager_with_error(mock_adapter, test_plugin):
 
     # Use context manager
     with pytest.raises(Exception):
-        async with batcher as b:
+        async with batcher as _:
             # Add some statements
-            b.add_statement("SELECT 1")
-            b.add_statement("SELECT 2")
+            batcher.add_statement("SELECT 1")
+            batcher.add_statement("SELECT 2")
 
     # Verify plugin state
     assert test_plugin.initialized
@@ -195,11 +197,12 @@ async def test_context_manager_with_plugin_error(mock_adapter):
     assert mock_adapter.execute.call_count == 0
 
 
+@pytest.mark.asyncio
 async def test_async_batcher_context_manager_error_handling():
-    """Test error handling in async batcher context manager."""
-    adapter = MagicMock()
-    adapter.connect.side_effect = AdapterConnectionError("test")
+    """Test error handling in the async batcher context manager."""
+    mock_adapter = AsyncMock()
+    mock_adapter.execute = AsyncMock(side_effect=AdapterConnectionError("Test error"))
 
-    with pytest.raises(AdapterConnectionError):
-        async with AsyncSQLBatcher(adapter) as _:  # Use _ instead of b
-            pass
+    async with AsyncSQLBatcher(adapter=mock_adapter) as _:
+        with pytest.raises(AdapterConnectionError):
+            await mock_adapter.execute("SELECT 1")

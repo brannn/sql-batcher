@@ -41,7 +41,9 @@ class RetryConfig:
         self.timeout = timeout
 
 
-def with_retry(retry_config: Optional[RetryConfig] = None) -> Callable[[Callable[..., T]], Callable[..., T]]:
+def with_retry(
+    retry_config: Optional[RetryConfig] = None,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to add retry functionality to a function.
 
     Args:
@@ -78,7 +80,8 @@ def with_retry(retry_config: Optional[RetryConfig] = None) -> Callable[[Callable
 
                     # Calculate delay with exponential backoff
                     delay = min(
-                        retry_config.initial_delay * (retry_config.backoff_factor**attempt),
+                        retry_config.initial_delay
+                        * (retry_config.backoff_factor**attempt),
                         retry_config.max_delay,
                     )
 
@@ -112,7 +115,8 @@ def with_retry(retry_config: Optional[RetryConfig] = None) -> Callable[[Callable
 
                     # Calculate delay with exponential backoff
                     delay = min(
-                        retry_config.initial_delay * (retry_config.backoff_factor**attempt),
+                        retry_config.initial_delay
+                        * (retry_config.backoff_factor**attempt),
                         retry_config.max_delay,
                     )
 

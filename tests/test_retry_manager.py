@@ -1,7 +1,6 @@
 """Test retry manager."""
 
 import asyncio
-from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

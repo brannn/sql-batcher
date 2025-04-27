@@ -9,7 +9,7 @@ from typing import List
 
 from sql_batcher import AsyncSQLBatcher
 from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
-from sql_batcher.plugins import MetricsCollector, QueryLogger, SQLPreprocessor
+from sql_batcher.hooks import MetricsCollector, QueryLogger, SQLPreprocessor
 
 
 async def main() -> None:

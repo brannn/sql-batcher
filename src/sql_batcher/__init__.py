@@ -1,33 +1,32 @@
-"""SQL Batcher - A Python library for efficient SQL batching.
-
-This package provides tools for batching SQL statements, managing database
-connections, and optimizing database operations.
 """
+SQL Batcher package.
 
-from sql_batcher.async_batcher import AsyncSQLBatcher
-from sql_batcher.batch_manager import BatchManager
-from sql_batcher.batcher import SQLBatcher
-from sql_batcher.exceptions import (
-    InsertMergerError,
-    PluginError,
-    QueryCollectorError,
-    RetryError,
-    SQLBatcherError,
-)
-from sql_batcher.hook_manager import HookManager
-from sql_batcher.retry_manager import RetryManager
+This package provides utilities for batching SQL statements
+and executing them efficiently.
+"""
 
 __version__ = "0.1.0"
 
+# Import core components
+from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
+from sql_batcher.async_batcher import AsyncSQLBatcher
+from sql_batcher.batcher import SQLBatcher
+from sql_batcher.exceptions import (
+    AdapterConnectionError,
+    AdapterExecutionError,
+    BatchSizeExceededError,
+    MaxRetriesExceededError,
+    TimeoutError,
+)
+
 __all__ = [
-    "SQLBatcher",
+    "AsyncSQLAdapter",
     "AsyncSQLBatcher",
-    "BatchManager",
-    "RetryManager",
-    "HookManager",
-    "SQLBatcherError",
-    "RetryError",
-    "PluginError",
-    "QueryCollectorError",
-    "InsertMergerError",
+    "SQLAdapter",
+    "SQLBatcher",
+    "AdapterConnectionError",
+    "AdapterExecutionError",
+    "BatchSizeExceededError",
+    "MaxRetriesExceededError",
+    "TimeoutError",
 ]

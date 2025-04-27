@@ -340,7 +340,7 @@ class TestInsertMerger:
             for i in range(1000)
         ]
 
-        merged = merger.merge(statements)
+        merger.merge(statements)
         final_memory = process.memory_info().rss
 
         # Memory usage assertions
@@ -387,12 +387,140 @@ class TestInsertMerger:
         )
 
     def test_merge_insert_statements_with_different_tables(self):
-        """Test merging insert statements with different tables."""
+        """Test merging insert statements for different tables."""
         merger = InsertMerger()
 
         # Add statements for different tables
-        merger.add_insert("INSERT INTO table1 (col1, col2) VALUES (1, 2)")
-        merger.add_insert("INSERT INTO table2 (col1, col2) VALUES (3, 4)")
+        merger.add_statement("INSERT INTO table1 (col1) VALUES (1)")
+        merger.add_statement("INSERT INTO table2 (col1) VALUES (2)")
+
+        # Get merged statements
+        merged_statements = merger.get_merged_statements()
 
         # Verify that statements for different tables are not merged
-        assert len(merger.get_merged_statements()) == 2
+        assert len(merged_statements) == 2
+        assert merged_statements[0] == "INSERT INTO table1 (col1) VALUES (1)"
+        assert merged_statements[1] == "INSERT INTO table2 (col1) VALUES (2)"
+
+
+def test_insert_merger_initialization():
+    """Test InsertMerger initialization with default and custom max bytes."""
+    # Test with default max bytes
+    merger = InsertMerger()
+    assert merger.max_bytes == 900_000
+    assert merger.table_maps == {}
+
+    # Test with custom max bytes
+    merger = InsertMerger(max_bytes=500_000)
+    assert merger.max_bytes == 500_000
+    assert merger.table_maps == {}
+
+
+def test_add_statement_simple_insert():
+    """Test adding simple INSERT statements."""
+    merger = InsertMerger()
+
+    # Add a simple INSERT statement
+    result = merger.add_statement("INSERT INTO table VALUES (1, 2, 3)")
+    assert result is None
+    assert "table" in merger.table_maps
+    assert len(merger.table_maps["table"]["values"]) == 1
+
+    # Add another compatible INSERT
+    result = merger.add_statement("INSERT INTO table VALUES (4, 5, 6)")
+    assert result is None
+    assert len(merger.table_maps["table"]["values"]) == 2
+
+
+def test_add_statement_with_columns():
+    """Test adding INSERT statements with column specifications."""
+    merger = InsertMerger()
+
+    # Add an INSERT with columns
+    result = merger.add_statement("INSERT INTO table (col1, col2) VALUES (1, 2)")
+    assert result is None
+    assert "table" in merger.table_maps
+    assert merger.table_maps["table"]["columns"] == "(col1, col2)"
+
+    # Add another compatible INSERT
+    result = merger.add_statement("INSERT INTO table (col1, col2) VALUES (3, 4)")
+    assert result is None
+    assert len(merger.table_maps["table"]["values"]) == 2
+
+
+def test_add_statement_incompatible_columns():
+    """Test adding INSERT statements with incompatible column specifications."""
+    merger = InsertMerger()
+
+    # Add first INSERT
+    result = merger.add_statement("INSERT INTO table (col1, col2) VALUES (1, 2)")
+    assert result is None
+
+    # Add incompatible INSERT
+    result = merger.add_statement("INSERT INTO table (col1, col3) VALUES (3, 4)")
+    assert result == "INSERT INTO table (col1, col3) VALUES (3, 4)"
+    assert len(merger.table_maps["table"]["values"]) == 1
+
+
+def test_add_statement_different_tables():
+    """Test adding INSERT statements for different tables."""
+    merger = InsertMerger()
+
+    # Add INSERT for first table
+    result = merger.add_statement("INSERT INTO table1 VALUES (1)")
+    assert result is None
+    assert "table1" in merger.table_maps
+
+    # Add INSERT for second table
+    result = merger.add_statement("INSERT INTO table2 VALUES (2)")
+    assert result is None
+    assert "table2" in merger.table_maps
+    assert len(merger.table_maps["table1"]["values"]) == 1
+    assert len(merger.table_maps["table2"]["values"]) == 1
+
+
+def test_add_statement_non_insert():
+    """Test adding non-INSERT statements."""
+    merger = InsertMerger()
+
+    # Add a SELECT statement
+    result = merger.add_statement("SELECT * FROM table")
+    assert result == "SELECT * FROM table"
+    assert merger.table_maps == {}
+
+    # Add an UPDATE statement
+    result = merger.add_statement("UPDATE table SET col = 1")
+    assert result == "UPDATE table SET col = 1"
+    assert merger.table_maps == {}
+
+
+def test_flush_all():
+    """Test flushing all pending INSERT statements."""
+    merger = InsertMerger()
+
+    # Add INSERT statements
+    merger.add_statement("INSERT INTO table1 VALUES (1)")
+    merger.add_statement("INSERT INTO table1 VALUES (2)")
+    merger.add_statement("INSERT INTO table2 VALUES (3)")
+
+    # Flush all statements
+    results = merger.flush_all()
+    assert len(results) == 2
+    assert "INSERT INTO table1 VALUES (1), (2)" in results
+    assert "INSERT INTO table2 VALUES (3)" in results
+    assert merger.table_maps == {}
+
+
+def test_max_bytes_limit():
+    """Test that statements are flushed when max_bytes is exceeded."""
+    merger = InsertMerger(max_bytes=50)
+
+    # Add first INSERT
+    result = merger.add_statement("INSERT INTO table VALUES (1, 2, 3)")
+    assert result is None
+
+    # Add second INSERT that would exceed max_bytes
+    result = merger.add_statement("INSERT INTO table VALUES (4, 5, 6)")
+    assert result is not None
+    assert result.startswith("INSERT INTO table VALUES")
+    assert len(merger.table_maps["table"]["values"]) == 1

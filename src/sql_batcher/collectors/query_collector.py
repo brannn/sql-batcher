@@ -5,7 +5,7 @@ This module collects and tracks SQL queries and their metadata.
 
 from typing import Any, Dict, List, Optional
 
-from sql_batcher.exceptions import QueryCollectorError
+from sql_batcher.utils.insert_merger import InsertMerger
 
 
 class QueryCollector:
@@ -26,6 +26,8 @@ class QueryCollector:
         delimiter (str): SQL statement delimiter.
         dry_run (bool): Whether to operate in dry run mode.
         auto_adjust_for_columns (bool): Whether to automatically adjust for columns.
+        merge_inserts (bool): Whether to merge compatible INSERT statements.
+        insert_merger (Optional[InsertMerger]): InsertMerger instance for merging INSERT statements.
     """
 
     def __init__(
@@ -36,6 +38,8 @@ class QueryCollector:
         min_adjustment_factor: float = 0.5,
         max_adjustment_factor: float = 2.0,
         auto_adjust_for_columns: bool = False,
+        merge_inserts: bool = False,
+        max_bytes: Optional[int] = None,
     ) -> None:
         """Initialize a QueryCollector."""
         self.queries: List[Dict[str, Any]] = []
@@ -48,6 +52,10 @@ class QueryCollector:
         self.delimiter = delimiter
         self.dry_run = dry_run
         self.auto_adjust_for_columns = auto_adjust_for_columns
+        self.merge_inserts = merge_inserts
+        self.insert_merger = (
+            InsertMerger(max_bytes=max_bytes) if merge_inserts else None
+        )
 
     def collect(self, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -57,12 +65,19 @@ class QueryCollector:
             query (str): The SQL query to collect.
             metadata (Optional[Dict[str, Any]]): Optional metadata to associate with the query.
         """
-        self.queries.append({"query": query, "metadata": metadata or {}})
+        if self.merge_inserts and self.insert_merger:
+            merged = self.insert_merger.add_statement(query)
+            if merged:
+                self.queries.append({"query": merged, "metadata": metadata or {}})
+        else:
+            self.queries.append({"query": query, "metadata": metadata or {}})
 
     def clear(self) -> None:
         """Clear all collected queries."""
         self.queries = []
         self.current_size = 0
+        if self.insert_merger:
+            self.insert_merger = InsertMerger(max_bytes=self.insert_merger.max_bytes)
 
     def get_all(self) -> List[Dict[str, Any]]:
         """
@@ -71,6 +86,10 @@ class QueryCollector:
         Returns:
             list: List of all collected queries with their metadata.
         """
+        if self.merge_inserts and self.insert_merger:
+            merged_queries = self.insert_merger.flush_all()
+            for query in merged_queries:
+                self.queries.append({"query": query, "metadata": {}})
         return self.queries
 
     def get_count(self) -> int:
@@ -89,6 +108,10 @@ class QueryCollector:
         Returns:
             list: Current batch of queries.
         """
+        if self.merge_inserts and self.insert_merger:
+            merged_queries = self.insert_merger.flush_all()
+            for query in merged_queries:
+                self.queries.append({"query": query, "metadata": {}})
         return [q["query"] for q in self.queries]
 
     def get_current_size(self) -> int:
@@ -113,6 +136,8 @@ class QueryCollector:
         """Reset the collector state."""
         self.queries = []
         self.current_size = 0
+        if self.insert_merger:
+            self.insert_merger = InsertMerger(max_bytes=self.insert_merger.max_bytes)
 
     def get_column_count(self) -> Optional[int]:
         """

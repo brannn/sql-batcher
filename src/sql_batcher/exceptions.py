@@ -9,13 +9,9 @@ related exceptions with a single except clause.
 class SQLBatcherError(Exception):
     """Base exception class for all sql-batcher related errors."""
 
-    pass
-
 
 class BatchError(SQLBatcherError):
     """Base class for batch-related errors."""
-
-    pass
 
 
 class BatchSizeExceededError(BatchError):
@@ -44,8 +40,6 @@ class InvalidQueryError(SQLBatcherError):
 class AdapterError(SQLBatcherError):
     """Base class for adapter-related errors."""
 
-    pass
-
 
 class AdapterConnectionError(AdapterError):
     """Raised when there are issues connecting to the database."""
@@ -71,13 +65,9 @@ class AdapterExecutionError(AdapterError):
 class ConfigurationError(SQLBatcherError):
     """Raised when there are issues with configuration settings."""
 
-    pass
-
 
 class RetryError(SQLBatcherError):
     """Base class for retry-related errors."""
-
-    pass
 
 
 class MaxRetriesExceededError(RetryError):
@@ -103,34 +93,22 @@ class TimeoutError(RetryError):
 class ValidationError(SQLBatcherError):
     """Raised when there is a validation error."""
 
-    pass
-
 
 class QueryCollectorError(SQLBatcherError):
     """Raised when there is an error in the query collector."""
-
-    pass
 
 
 class BatcherError(SQLBatcherError):
     """Raised when there is an error in the batcher."""
 
-    pass
-
 
 class ExecutorError(SQLBatcherError):
     """Raised when there is an error in the executor."""
-
-    pass
 
 
 class InsertMergerError(SQLBatcherError):
     """Raised when there is an error in the insert merger."""
 
-    pass
-
 
 class PluginError(SQLBatcherError):
     """Raised when there is an error in plugin operations."""
-
-    pass

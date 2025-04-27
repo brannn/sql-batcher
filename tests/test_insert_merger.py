@@ -4,8 +4,6 @@ Tests for the InsertMerger class.
 
 import unittest
 
-import pytest
-
 from sql_batcher.insert_merger import InsertMerger
 
 

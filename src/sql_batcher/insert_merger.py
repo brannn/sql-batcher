@@ -4,12 +4,11 @@ Insert statement merger for SQL Batcher.
 This module provides functionality to merge INSERT statements for better performance.
 """
 
+import re
 from typing import List, Optional, TypeVar
 
+T = TypeVar("T", bound=str)
 
-import re
-
-T = TypeVar('T', bound=str)
 
 class InsertMerger:
     """
@@ -174,6 +173,29 @@ class InsertMerger:
 
         return result
 
+    def add_statement(self, statement: T) -> Optional[T]:
+        """
+        Add a statement to the current batch.
+
+        Args:
+            statement: SQL statement to add
+
+        Returns:
+            Merged statement if a flush was triggered, None otherwise
+        """
+        # Add statement to current batch
+        self.current_batch.append(statement)
+
+        # If we have more than one statement, try to merge them
+        if len(self.current_batch) > 1:
+            merged = self.merge(self.current_batch)
+            if len(merged) < len(self.current_batch):
+                # If merging was successful, update the batch
+                self.current_batch = merged
+                return merged[0] if merged else None
+
+        return None
+
     def flush_all(self) -> List[T]:
         """
         Flush all buffered statements and return them as a list of merged statements.
@@ -183,9 +205,9 @@ class InsertMerger:
         """
         # Get all statements from the current batch
         statements = self.current_batch.copy()
-        
+
         # Clear the current batch
         self.current_batch = []
-        
+
         # Merge the statements
         return self.merge(statements)

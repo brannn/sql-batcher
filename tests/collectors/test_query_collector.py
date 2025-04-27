@@ -1,11 +1,10 @@
 """Tests for the QueryCollector class."""
 
-from typing import Dict, List, Optional
+from typing import List
 
 import pytest
 
 from sql_batcher.collectors.query_collector import ListQueryCollector, QueryCollector
-from sql_batcher.exceptions import QueryCollectorError
 
 
 class TestQueryCollector:

@@ -1,13 +1,15 @@
-"""Async Trino adapter for sql-batcher.
+"""
+Async adapter for Trino databases.
 
-This module provides an async adapter for Trino databases using trino-async.
+This module provides an async adapter for Trino databases.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+import asyncio
+from typing import Any, Optional
 
-import trino.async_client as trino
+import trino
 
-from sql_batcher.adapters.async_base import AsyncSQLAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
 
 
@@ -39,27 +41,31 @@ class AsyncTrinoAdapter(AsyncSQLAdapter):
         self.catalog = catalog
         self.schema = schema
         self.conn_kwargs = kwargs
-        self.client: Optional[trino.TrinoClient] = None
+        self.client: Optional[trino.dbapi.Connection] = None
 
     async def connect(self) -> None:
         """Connect to the Trino database."""
         try:
-            self.client = trino.TrinoClient(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                catalog=self.catalog,
-                schema=self.schema,
-                **self.conn_kwargs,
+            loop = asyncio.get_running_loop()
+            self.client = await loop.run_in_executor(
+                None,
+                lambda: trino.dbapi.connect(
+                    host=self.host,
+                    port=self.port,
+                    user=self.user,
+                    catalog=self.catalog,
+                    schema=self.schema,
+                    **self.conn_kwargs,
+                ),
             )
-            await self.client.connect()
         except Exception as e:
             raise AdapterConnectionError("Trino", str(e)) from e
 
     async def disconnect(self) -> None:
         """Disconnect from the Trino database."""
         if self.client:
-            await self.client.close()
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.client.close)
             self.client = None
 
     async def execute(self, query: str) -> Any:
@@ -78,7 +84,10 @@ class AsyncTrinoAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Trino", "Not connected to database")
 
         try:
-            return await self.client.execute(query)
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.client.cursor)
+            await loop.run_in_executor(None, cursor.execute, query)
+            return await loop.run_in_executor(None, cursor.fetchall)
         except Exception as e:
             raise AdapterExecutionError("Trino", query, str(e)) from e
 
@@ -88,7 +97,9 @@ class AsyncTrinoAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Trino", "Not connected to database")
 
         try:
-            await self.client.execute("START TRANSACTION")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.client.cursor)
+            await loop.run_in_executor(None, cursor.execute, "START TRANSACTION")
         except Exception as e:
             raise AdapterExecutionError("Trino", "START TRANSACTION", str(e)) from e
 
@@ -98,7 +109,9 @@ class AsyncTrinoAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Trino", "Not connected to database")
 
         try:
-            await self.client.execute("COMMIT")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.client.cursor)
+            await loop.run_in_executor(None, cursor.execute, "COMMIT")
         except Exception as e:
             raise AdapterExecutionError("Trino", "COMMIT", str(e)) from e
 
@@ -108,6 +121,8 @@ class AsyncTrinoAdapter(AsyncSQLAdapter):
             raise AdapterConnectionError("Trino", "Not connected to database")
 
         try:
-            await self.client.execute("ROLLBACK")
+            loop = asyncio.get_running_loop()
+            cursor = await loop.run_in_executor(None, self.client.cursor)
+            await loop.run_in_executor(None, cursor.execute, "ROLLBACK")
         except Exception as e:
             raise AdapterExecutionError("Trino", "ROLLBACK", str(e)) from e

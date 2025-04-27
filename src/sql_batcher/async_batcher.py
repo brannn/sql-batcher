@@ -6,13 +6,11 @@ the main SQLBatcher class for batching SQL statements based on size limits.
 """
 
 import re
-from types import TracebackType
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
-import time
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from sql_batcher.adapters.base import AsyncSQLAdapter
+from sql_batcher.hooks import Plugin, PluginManager
 from sql_batcher.insert_merger import InsertMerger
-from sql_batcher.plugins import HookType, Plugin, PluginManager
 from sql_batcher.query_collector import QueryCollector
 
 
@@ -48,7 +46,7 @@ class SavepointContext:
             else:
                 await self.batcher._adapter.release_savepoint(self.name)
         finally:
-            delattr(self.batcher, '_in_savepoint_context')
+            delattr(self.batcher, "_in_savepoint_context")
 
 
 class AsyncSQLBatcher:
@@ -241,8 +239,7 @@ class AsyncSQLBatcher:
 
         # Check if we should flush before adding
         should_flush = (
-            new_count >= self.max_batch_size
-            or new_size >= self.max_batch_bytes
+            new_count >= self.max_batch_size or new_size >= self.max_batch_bytes
         )
 
         # Add the statement to the current batch
@@ -279,7 +276,7 @@ class AsyncSQLBatcher:
 
         # Only create a savepoint if we're not already in a savepoint context
         savepoint_name = f"batch_{id(self)}"
-        if not hasattr(self, '_in_savepoint_context'):
+        if not hasattr(self, "_in_savepoint_context"):
             await self._adapter.create_savepoint(savepoint_name)
 
         try:
@@ -292,14 +289,15 @@ class AsyncSQLBatcher:
                 except Exception as e:
                     # Only rollback and reset if it's not a retryable error
                     from sql_batcher.exceptions import AdapterExecutionError
+
                     if not isinstance(e, AdapterExecutionError):
-                        if not hasattr(self, '_in_savepoint_context'):
+                        if not hasattr(self, "_in_savepoint_context"):
                             await self._adapter.rollback_to_savepoint(savepoint_name)
                         self.reset()
                     raise e
 
             # Release the savepoint
-            if not hasattr(self, '_in_savepoint_context'):
+            if not hasattr(self, "_in_savepoint_context"):
                 await self._adapter.release_savepoint(savepoint_name)
 
             # Reset the batch
@@ -309,8 +307,9 @@ class AsyncSQLBatcher:
         except Exception as e:
             # Only rollback and reset if it's not a retryable error
             from sql_batcher.exceptions import AdapterExecutionError
+
             if not isinstance(e, AdapterExecutionError):
-                if not hasattr(self, '_in_savepoint_context'):
+                if not hasattr(self, "_in_savepoint_context"):
                     await self._adapter.rollback_to_savepoint(savepoint_name)
                 self.reset()
             raise e
@@ -350,7 +349,9 @@ class AsyncSQLBatcher:
         for statement in statements:
             should_flush = self.add_statement(statement)
             if should_flush:
-                processed = await self.flush(execute_callback, query_collector, metadata)
+                processed = await self.flush(
+                    execute_callback, query_collector, metadata
+                )
                 processed_statements.extend(processed)
 
         # Flush any remaining statements

@@ -1,4 +1,6 @@
-"""Test hook manager."""
+"""Tests for the hook manager."""
+
+from typing import Any, Dict, List
 
 import pytest
 

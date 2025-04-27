@@ -7,9 +7,7 @@ through hooks and custom processors.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
-
-from sql_batcher.exceptions import PluginError
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 
 class HookType(Enum):
@@ -41,12 +39,10 @@ class Plugin(ABC):
     @abstractmethod
     def get_name(self) -> str:
         """Get the plugin name."""
-        pass
 
     @abstractmethod
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
-        pass
 
 
 class PluginManager:

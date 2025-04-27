@@ -1,7 +1,5 @@
 """Tests for the QueryCollector class."""
 
-import pytest
-
 from sql_batcher.query_collector import QueryCollector
 
 

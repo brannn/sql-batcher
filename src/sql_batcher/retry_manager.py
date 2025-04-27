@@ -1,11 +1,11 @@
 """Retry manager for SQL Batcher.
 
-This module handles retry and timeout logic for SQL operations.
+This module provides functionality to manage retries for failed operations.
 """
 
 import asyncio
 import logging
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar
 
 from sql_batcher.exceptions import RetryError
 

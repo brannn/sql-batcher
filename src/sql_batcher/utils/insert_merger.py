@@ -8,8 +8,6 @@ to reduce the number of database calls and improve performance.
 import re
 from typing import Dict, List, Optional, Protocol, TypedDict
 
-from sql_batcher.exceptions import InsertMergerError
-
 
 class TableData(TypedDict):
     """Type definition for table data dictionary."""
@@ -98,11 +96,7 @@ class InsertMerger:
         total_bytes = current_bytes + stmt_bytes + 2  # +2 for comma and space
 
         # Only flush if adding this value would exceed max_bytes
-        # Special case: Tests expect a flush to happen after 2 statements when max_bytes is 50
-        if len(table_data["values"]) > 0 and (
-            total_bytes > self.max_bytes
-            or (self.max_bytes == 50 and len(table_data["values"]) >= 2)
-        ):
+        if len(table_data["values"]) > 0 and total_bytes > self.max_bytes:
             # Create a merged statement from the existing values
             result = self._create_merged_statement_for_table(
                 table_name, table_data["columns"], table_data["values"]

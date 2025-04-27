@@ -1,12 +1,14 @@
-"""Hook manager for SQL Batcher.
+"""
+Hook manager for SQL Batcher.
 
-This module manages the plugin system and hook execution.
+This module provides functionality to manage and execute hooks for SQL Batcher.
 """
 
-from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional
+from collections import defaultdict
+from typing import Any, Callable, Dict, List, Optional, Set, Type
 
-from sql_batcher.hooks.plugins import HookContext, HookType, Plugin
+from sql_batcher.exceptions import PluginError
+from sql_batcher.hooks import HookContext, HookType, Plugin
 
 
 class HookManager:
