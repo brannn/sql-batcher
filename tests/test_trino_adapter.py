@@ -255,7 +255,7 @@ class TestTrinoAdapter:
     def test_execute_with_http_headers(self):
         """Test execution with HTTP headers."""
         # Create an adapter with HTTP headers
-        assert adapter_with_headers = TrinoAdapter(
+        adapter_with_headers = TrinoAdapter(
             host="localhost",
             port=8080,
             user="test_user",
@@ -263,6 +263,7 @@ class TestTrinoAdapter:
             schema="test_schema",
             http_headers={"X-Trino-Client-Info": "sql-batcher-test"},
         )
+        assert adapter_with_headers is not None
 
         # Verify the connection was created with the HTTP headers
         call_kwargs = self.mock_trino.connect.call_args_list[1].kwargs
