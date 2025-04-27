@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from sql_batcher.exceptions import PluginError
-from sql_batcher.hooks import HookContext, HookType, Plugin
+from sql_batcher.hooks.plugins import HookContext, HookType, Plugin
 
 
 class HookManager:
@@ -16,10 +16,8 @@ class HookManager:
 
     def __init__(self) -> None:
         """Initialize the hook manager."""
-        self._plugins: List[Plugin] = []
-        self._hooks: Dict[HookType, List[Callable[[HookContext], Any]]] = {
-            hook_type: [] for hook_type in HookType
-        }
+        self._plugins: Dict[str, Plugin] = {}  # Store plugins by name
+        self._hooks: Dict[HookType, List[Callable[[HookContext], Any]]] = defaultdict(list)
 
     def register_plugin(self, plugin: Plugin) -> None:
         """Register a plugin.
@@ -27,7 +25,12 @@ class HookManager:
         Args:
             plugin: The plugin to register
         """
-        self._plugins.append(plugin)
+        name = plugin.get_name()
+        if name in self._plugins:
+            # If plugin already exists, remove its hooks first
+            self.unregister_plugin(name)
+        
+        self._plugins[name] = plugin
         for hook_type, hooks in plugin.get_hooks().items():
             self._hooks[hook_type].extend(hooks)
 
@@ -37,16 +40,22 @@ class HookManager:
         Args:
             plugin_name: Name of the plugin to unregister
         """
-        for plugin in self._plugins[:]:
-            if plugin.get_name() == plugin_name:
-                self._plugins.remove(plugin)
-                # Remove plugin's hooks
-                for hook_type in HookType:
-                    self._hooks[hook_type] = [
-                        hook
-                        for hook in self._hooks[hook_type]
-                        if hook not in plugin.get_hooks()[hook_type]
-                    ]
+        if plugin_name not in self._plugins:
+            return
+
+        plugin = self._plugins[plugin_name]
+        plugin_hooks = plugin.get_hooks()
+        
+        # Remove all hooks for this plugin
+        for hook_type in HookType:
+            if hook_type in plugin_hooks:
+                self._hooks[hook_type] = [
+                    hook for hook in self._hooks[hook_type]
+                    if hook not in plugin_hooks[hook_type]
+                ]
+        
+        # Remove the plugin
+        del self._plugins[plugin_name]
 
     def get_plugins(self) -> List[Plugin]:
         """Get all registered plugins.
@@ -54,7 +63,7 @@ class HookManager:
         Returns:
             List of registered plugins
         """
-        return self._plugins.copy()
+        return list(self._plugins.values())
 
     def get_hooks(self, hook_type: HookType) -> List[Callable[[HookContext], Any]]:
         """Get hooks of a specific type.

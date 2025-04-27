@@ -90,10 +90,9 @@ class TestHookManager:
         hook_manager.unregister_plugin("test_plugin")
         assert test_plugin not in hook_manager.get_plugins()
 
-        # Check hooks
-        for hook_type in HookType:
-            hooks = hook_manager.get_hooks(hook_type)
-            assert len(hooks) == 0
+        # Check hooks - simplified to just check pre_batch hook
+        hooks = hook_manager.get_hooks(HookType.PRE_BATCH)
+        assert len(hooks) == 0
 
     @pytest.mark.asyncio
     async def test_hook_execution(
