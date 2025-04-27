@@ -5,9 +5,7 @@ This module provides abstract base classes for database adapters used by SQL Bat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-
-from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
+from typing import Any, Callable, List, Optional, Sequence, TypeVar, Union
 
 T = TypeVar("T")
 
@@ -32,7 +30,6 @@ class SQLAdapter(ABC):
         Returns:
             List of result rows
         """
-        pass
 
     @abstractmethod
     def get_max_query_size(self) -> int:
@@ -42,12 +39,10 @@ class SQLAdapter(ABC):
         Returns:
             Maximum query size in bytes
         """
-        pass
 
     @abstractmethod
     def close(self) -> None:
         """Close the database connection."""
-        pass
 
     def begin_transaction(self) -> None:
         """
@@ -56,7 +51,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     def commit_transaction(self) -> None:
         """
@@ -65,7 +59,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     def rollback_transaction(self) -> None:
         """
@@ -74,7 +67,6 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     def create_savepoint(self, name: str) -> None:
         """
@@ -86,7 +78,6 @@ class SQLAdapter(ABC):
         Args:
             name: Name of the savepoint
         """
-        pass
 
     def rollback_to_savepoint(self, name: str) -> None:
         """
@@ -98,7 +89,6 @@ class SQLAdapter(ABC):
         Args:
             name: Name of the savepoint to rollback to
         """
-        pass
 
     def release_savepoint(self, name: str) -> None:
         """
@@ -110,7 +100,6 @@ class SQLAdapter(ABC):
         Args:
             name: Name of the savepoint to release
         """
-        pass
 
 
 class AsyncSQLAdapter(ABC):
@@ -133,7 +122,6 @@ class AsyncSQLAdapter(ABC):
         Returns:
             List of result rows
         """
-        pass
 
     @abstractmethod
     async def get_max_query_size(self) -> int:
@@ -143,12 +131,10 @@ class AsyncSQLAdapter(ABC):
         Returns:
             Maximum query size in bytes
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the database connection."""
-        pass
 
     async def begin_transaction(self) -> None:
         """
@@ -157,7 +143,6 @@ class AsyncSQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     async def commit_transaction(self) -> None:
         """
@@ -166,7 +151,6 @@ class AsyncSQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     async def rollback_transaction(self) -> None:
         """
@@ -175,7 +159,6 @@ class AsyncSQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
-        pass
 
     async def create_savepoint(self, name: str) -> None:
         """
@@ -187,7 +170,6 @@ class AsyncSQLAdapter(ABC):
         Args:
             name: Name of the savepoint
         """
-        pass
 
     async def rollback_to_savepoint(self, name: str) -> None:
         """
@@ -199,7 +181,6 @@ class AsyncSQLAdapter(ABC):
         Args:
             name: Name of the savepoint to rollback to
         """
-        pass
 
     async def release_savepoint(self, name: str) -> None:
         """
@@ -211,7 +192,6 @@ class AsyncSQLAdapter(ABC):
         Args:
             name: Name of the savepoint to release
         """
-        pass
 
 
 class GenericAdapter(SQLAdapter):
