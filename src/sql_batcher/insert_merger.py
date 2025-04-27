@@ -1,13 +1,15 @@
 """
 Insert statement merger for SQL Batcher.
 
-This module provides functionality to merge multiple INSERT statements into a single
-statement where possible, improving performance and reducing database load.
+This module provides functionality to merge INSERT statements for better performance.
 """
 
-import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, TypeVar
 
+
+import re
+
+T = TypeVar('T', bound=str)
 
 class InsertMerger:
     """
@@ -25,6 +27,7 @@ class InsertMerger:
             r"INSERT\s+INTO\s+\w+\s*\(([^)]*)\)", re.IGNORECASE
         )
         self._values_pattern = re.compile(r"VALUES\s*\(([^)]*)\)", re.IGNORECASE)
+        self.current_batch: List[T] = []
 
     def _extract_table_name(self, statement: str) -> Optional[str]:
         """
@@ -69,7 +72,7 @@ class InsertMerger:
             return None
         return [val.strip() for val in match.group(1).split(",")]
 
-    def _are_compatible(self, stmt1: str, stmt2: str) -> bool:
+    def _are_compatible(self, stmt1: T, stmt2: T) -> bool:
         """
         Check if two INSERT statements are compatible for merging.
 
@@ -94,7 +97,7 @@ class InsertMerger:
 
         return True
 
-    def _merge_values(self, stmt1: str, stmt2: str) -> Optional[str]:
+    def _merge_values(self, stmt1: T, stmt2: T) -> Optional[T]:
         """
         Merge values from two compatible INSERT statements.
 
@@ -128,7 +131,7 @@ class InsertMerger:
         # Construct the merged statement
         return f"{base}{combined_values})"
 
-    def merge(self, statements: List[str]) -> List[str]:
+    def merge(self, statements: List[T]) -> List[T]:
         """
         Merge compatible INSERT statements.
 
@@ -141,8 +144,8 @@ class InsertMerger:
         if not statements:
             return []
 
-        result: List[str] = []
-        current: Optional[str] = None
+        result: List[T] = []
+        current: Optional[T] = None
 
         for stmt in statements:
             # Skip non-INSERT statements
@@ -170,3 +173,19 @@ class InsertMerger:
             result.append(current)
 
         return result
+
+    def flush_all(self) -> List[T]:
+        """
+        Flush all buffered statements and return them as a list of merged statements.
+
+        Returns:
+            List of merged SQL statements
+        """
+        # Get all statements from the current batch
+        statements = self.current_batch.copy()
+        
+        # Clear the current batch
+        self.current_batch = []
+        
+        # Merge the statements
+        return self.merge(statements)
