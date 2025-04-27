@@ -98,3 +98,27 @@ class TimeoutError(RetryError):
         if message is None:
             message = f"Operation timed out after {timeout_seconds} seconds"
         super().__init__(message)
+
+
+class ValidationError(SQLBatcherError):
+    """Raised when there is a validation error."""
+
+    pass
+
+
+class QueryCollectorError(SQLBatcherError):
+    """Raised when there is an error in the query collector."""
+
+    pass
+
+
+class BatcherError(SQLBatcherError):
+    """Raised when there is an error in the batcher."""
+
+    pass
+
+
+class ExecutorError(SQLBatcherError):
+    """Raised when there is an error in the executor."""
+
+    pass
