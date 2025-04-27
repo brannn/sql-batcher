@@ -2,10 +2,9 @@
 Tests for SQL adapter base classes.
 """
 
-from typing import Any, Generator, List, Protocol, TypeVar
+from typing import Any, List, Protocol, TypeVar
 
 import pytest
-from pytest import FixtureFunction
 
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter

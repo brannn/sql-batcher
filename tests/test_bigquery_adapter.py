@@ -2,7 +2,6 @@ from typing import Any, List, Tuple
 from unittest.mock import MagicMock
 
 import pytest
-from google.cloud import bigquery
 
 # Mark all tests in this file as using bigquery-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.bigquery]
