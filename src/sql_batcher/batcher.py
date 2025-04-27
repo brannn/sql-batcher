@@ -49,6 +49,19 @@ class SQLBatcher:
         self._batch_mode = batch_mode
         self._collector = QueryCollector(**kwargs)
 
+        # Expose public attributes
+        self.max_bytes = self._max_bytes
+        self.delimiter = self._collector.get_delimiter()
+        self.dry_run = self._collector.is_dry_run()
+        self.current_batch = self._collector.get_batch()
+        self.current_size = self._collector.get_current_size()
+        self.auto_adjust_for_columns = kwargs.get("auto_adjust_for_columns", False)
+        self.reference_column_count = self._collector.get_reference_column_count()
+        self.min_adjustment_factor = self._collector.get_min_adjustment_factor()
+        self.max_adjustment_factor = self._collector.get_max_adjustment_factor()
+        self.column_count = self._collector.get_column_count()
+        self.adjustment_factor = self._collector.get_adjustment_factor()
+
     def detect_column_count(self, statement: str) -> Optional[int]:
         """
         Detect the number of columns in an INSERT statement.
@@ -212,7 +225,7 @@ class SQLBatcher:
             return []
         else:
             # Execute the batch
-            results = execute_callback(batch_sql)
+            result = execute_callback(batch_sql)
 
             # Optionally collect the query
             if query_collector:
@@ -221,7 +234,8 @@ class SQLBatcher:
             # Reset the batch
             self.reset()
 
-            return results if results is not None else []
+            # Return the result
+            return [result] if result is not None else []
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:
         """

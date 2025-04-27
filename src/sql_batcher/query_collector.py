@@ -22,6 +22,7 @@ class QueryCollector:
         adjustment_factor (float): Current adjustment factor based on column count.
         delimiter (str): SQL statement delimiter.
         dry_run (bool): Whether to operate in dry run mode.
+        auto_adjust_for_columns (bool): Whether to automatically adjust for columns.
     """
 
     def __init__(
@@ -31,6 +32,7 @@ class QueryCollector:
         reference_column_count: int = 10,
         min_adjustment_factor: float = 0.5,
         max_adjustment_factor: float = 2.0,
+        auto_adjust_for_columns: bool = False,
     ) -> None:
         """Initialize a QueryCollector."""
         self.queries: List[Dict[str, Any]] = []
@@ -42,6 +44,7 @@ class QueryCollector:
         self.adjustment_factor: float = 1.0
         self.delimiter = delimiter
         self.dry_run = dry_run
+        self.auto_adjust_for_columns = auto_adjust_for_columns
 
     def collect(self, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """
