@@ -54,6 +54,8 @@ pip install -e ".[dev]"
 ```python
 from sql_batcher import SQLBatcher
 from sql_batcher.adapters import PostgreSQLAdapter
+from sql_batcher.query_collector import QueryCollector
+import time
 
 # Create a PostgreSQL adapter
 adapter = PostgreSQLAdapter(
@@ -64,19 +66,52 @@ adapter = PostgreSQLAdapter(
     password="password"
 )
 
-# Create statements
-statements = [
-    "INSERT INTO users (name) VALUES ('Alice')",
-    "INSERT INTO users (name) VALUES ('Bob')",
-    "INSERT INTO users (name) VALUES ('Charlie')",
-]
+# Generate a large number of INSERT statements
+statements = []
+for i in range(10000):
+    statements.append(
+        f"INSERT INTO users (id, name, email, created_at) "
+        f"VALUES ({i}, 'User {i}', 'user{i}@example.com', NOW())"
+    )
 
-# Create batcher with 1MB limit
-batcher = SQLBatcher(max_bytes=1_000_000)
+# Create a query collector to track performance
+collector = QueryCollector()
 
-# Process statements
-batcher.process_statements(statements, adapter.execute)
+# Create batcher with 1MB limit and insert merging enabled
+batcher = SQLBatcher(
+    max_bytes=1_000_000,
+    merge_inserts=True,
+    transaction_size=1000
+)
+
+# Process statements with tracking
+start_time = time.time()
+batcher.process_statements(statements, adapter.execute, collector)
+end_time = time.time()
+
+# Print performance statistics
+stats = collector.get_stats()
+print(f"Total statements: {len(statements)}")
+print(f"Total queries executed: {stats['count']}")
+print(f"Average batch size: {stats['avg_batch_size']}")
+print(f"Total execution time: {end_time - start_time:.2f} seconds")
 ```
+
+This example demonstrates how SQL Batcher can efficiently handle large datasets by:
+1. Batching statements to stay within database limits
+2. Merging compatible INSERT statements to reduce database calls
+3. Managing transactions for data consistency
+4. Tracking performance metrics
+
+The output might look like:
+```
+Total statements: 10000
+Total queries executed: 10
+Average batch size: 1000
+Total execution time: 2.34 seconds
+```
+
+Instead of executing 10,000 individual INSERT statements, SQL Batcher merged them into 10 efficient batch operations.
 
 ## Core Concepts
 
