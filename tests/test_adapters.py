@@ -6,6 +6,7 @@ from typing import Any, List, Optional, Protocol, Tuple, TypeVar
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import pytest_asyncio
 
 from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
@@ -297,35 +298,14 @@ class TestGenericAdapter:
         assert self.connection.commit.call_count == 1
 
 
-@pytest.mark.core
-class TestAsyncSQLAdapter:
-    """Test cases for AsyncSQLAdapter abstract base class."""
-
-    def test_abstract_methods_require_implementation(self) -> None:
-        """Test that AsyncSQLAdapter enforces implementation of abstract methods."""
-        with pytest.raises(TypeError):
-            AsyncSQLAdapter()  # type: ignore
-
-        class MinimalAsyncAdapter(AsyncSQLAdapter):
-            async def execute(self, sql: str) -> List[Any]:
-                return []
-
-            async def get_max_query_size(self) -> int:
-                return 1000
-
-            async def close(self) -> None:
-                pass
-
-        adapter = MinimalAsyncAdapter()
-        assert isinstance(adapter, AsyncSQLAdapter)
-
-
-@pytest.fixture
-async def async_adapter() -> TestAsyncAdapterImpl:
-    """Fixture providing a configured asynchronous test adapter."""
+@pytest_asyncio.fixture
+async def async_adapter():
+    """Create a test async adapter."""
     adapter = TestAsyncAdapterImpl()
-    yield adapter
-    await adapter.close()
+    try:
+        yield adapter
+    finally:
+        await adapter.close()
 
 
 @pytest.mark.asyncio

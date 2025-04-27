@@ -1,124 +1,33 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "sql-batcher"
 version = "0.1.0"
-description = "A Python library for batching SQL statements to optimize database operations"
-readme = "README.md"
-license = {file = "LICENSE"}
 authors = [
-    {name = "SQL Batcher Team", email = "info@example.com"}
+  { name="Example Author", email="author@example.com" },
 ]
+description = "A small example package"
+readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Topic :: Database",
-    "Topic :: Software Development :: Libraries",
-]
-dependencies = [
-    "typing-extensions>=4.0.0; python_version < '3.9'",
-    "psycopg2-binary>=2.9.10",
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.23.0",
-    "black>=24.1.0",
-    "isort>=5.13.0",
-    "flake8>=6.1.0",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/sql-batcher"
-Documentation = "https://github.com/yourusername/sql-batcher"
-"Bug Tracker" = "https://github.com/yourusername/sql-batcher/issues"
-"Source Code" = "https://github.com/yourusername/sql-batcher"
-
-[project.optional-dependencies]
-trino = ["trino>=0.310.0"]
-snowflake = ["snowflake-connector-python>=2.7.0"]
-spark = ["pyspark>=3.2.0"]
-bigquery = ["google-cloud-bigquery>=3.0.0"]
-postgresql = ["psycopg2-binary>=2.9.0"]
-all = [
-    "trino>=0.310.0",
-    "snowflake-connector-python>=2.7.0",
-    "pyspark>=3.2.0",
-    "google-cloud-bigquery>=3.0.0",
-    "psycopg2-binary>=2.9.0",
-]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=3.0.0",
-    "black>=22.3.0",
-    "isort>=5.10.0",
-    "mypy>=0.961",
-    "flake8>=4.0.0",
-]
-docs = [
-    "sphinx>=5.0.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "sphinx-autodoc-typehints>=1.18.0",
-]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.black]
-line-length = 88
-target-version = ["py38", "py39", "py310", "py311"]
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-
-[tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-skip_glob = ["*/docs/*", "setup.py"]
-honor_noqa = true
-treat_comments_as_code = ["# %%"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+Homepage = "https://github.com/example/project"
+Issues = "https://github.com/example/project/issues"
 
 [tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = ["src"]
+python_files = ["test_*.py"]
+addopts = "--cov=src/sql_batcher --cov-report=term --cov-report=html:coverage_html"
 markers = [
-    "core: Tests that don't require database connections",
-    "db: Tests that require actual database connections",
-    "postgres: Tests that require a PostgreSQL database",
-    "snowflake: Tests that require a Snowflake connection",
-    "trino: Tests that require a Trino connection",
-    "bigquery: Tests that require a BigQuery connection",
-    "spark: Tests that require a Spark connection",
+    "core: mark test as a core test",
+    "integration: mark test as an integration test",
 ]
