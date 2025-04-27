@@ -4,7 +4,18 @@
 [![PyPI Version](https://img.shields.io/pypi/v/sql-batcher.svg)](https://pypi.org/project/sql-batcher)
 [![License](https://img.shields.io/pypi/l/sql-batcher.svg)](https://github.com/sql-batcher/sql-batcher/blob/main/LICENSE)
 
-SQL Batcher is a powerful Python library designed to optimize large-scale SQL operations through intelligent batching, statement merging, and database-specific optimizations. It's particularly valuable for data engineers and application developers working with large datasets, complex data pipelines, or multiple database systems.
+SQL Batcher is a Python library designed to optimize large-scale SQL operations by batching SQL statements, intelligently merging inserts, managing transaction size, and applying database-specific optimizations. It is particularly valuable in data engineering, ETL pipelines, and large dataset ingestion.
+
+## Features
+
+- Smart Batching: Groups SQL statements dynamically based on max byte limits, database restrictions, and memory constraints
+- Insert Merging: Combines multiple INSERT statements into a single bulk operation to reduce round trips
+- Column-Aware Batching: Adjusts batch size automatically based on the number of columns
+- Database Adapter Layer: Supports multiple databases via a clean adapter pattern
+- Async Support: Full async/await support for modern Python applications
+- Retry and Timeout Handling: Configurable retry policies and timeout limits
+- Query Monitoring: Track and report SQL execution metrics
+- Extensible Configuration: Customizable batch sizes, auto-adjustments, and merge strategies
 
 ## Why SQL Batcher?
 
@@ -62,16 +73,109 @@ batcher.process_statements(statements, adapter.execute)
 ```
 
 ### 3. Column-Aware Batching
-SQL Batcher automatically adjusts batch sizes based on the number of columns in your statements:
+SQL Batcher automatically adjusts batch sizes based on the number of columns in your statements. This is particularly useful when dealing with tables that have varying numbers of columns, as it helps optimize memory usage and performance.
+
+#### How It Works
+The column-aware batching system uses a reference column count to dynamically adjust batch sizes. Here's how it works:
+
+1. **Reference Column Count**: This is the baseline number of columns used for batch size calculations. By default, it's set to 10 columns.
+
+2. **Adjustment Factor**: The system calculates an adjustment factor based on the ratio of the reference column count to the actual column count in your statements.
+
+3. **Batch Size Adjustment**: The maximum batch size is adjusted by multiplying it by this factor.
+
+#### Tuning Parameters
+You can fine-tune the column-aware batching behavior using these parameters:
 
 ```python
 batcher = SQLBatcher(
     adapter=adapter,
     max_bytes=1_000_000,
     auto_adjust_for_columns=True,
-    reference_column_count=10  # Base column count for adjustment
+    reference_column_count=10,  # Baseline column count
+    min_adjustment_factor=0.5,  # Minimum adjustment factor
+    max_adjustment_factor=2.0,  # Maximum adjustment factor
 )
 ```
+
+- **reference_column_count**: The baseline number of columns (default: 10)
+  - Higher values result in smaller batches for tables with fewer columns
+  - Lower values result in larger batches for tables with fewer columns
+  - Should be set based on your typical table structure
+
+- **min_adjustment_factor**: The minimum adjustment factor (default: 0.5)
+  - Prevents batches from becoming too small
+  - Useful for tables with many columns
+
+- **max_adjustment_factor**: The maximum adjustment factor (default: 2.0)
+  - Prevents batches from becoming too large
+  - Useful for tables with very few columns
+
+#### Example Scenarios
+
+1. **Tables with Many Columns**:
+```python
+# For a table with 20 columns
+batcher = SQLBatcher(
+    adapter=adapter,
+    max_bytes=1_000_000,
+    auto_adjust_for_columns=True,
+    reference_column_count=10,
+)
+# Adjustment factor = 10/20 = 0.5
+# Effective batch size = 1_000_000 * 0.5 = 500_000 bytes
+```
+
+2. **Tables with Few Columns**:
+```python
+# For a table with 5 columns
+batcher = SQLBatcher(
+    adapter=adapter,
+    max_bytes=1_000_000,
+    auto_adjust_for_columns=True,
+    reference_column_count=10,
+)
+# Adjustment factor = 10/5 = 2.0
+# Effective batch size = 1_000_000 * 2.0 = 2_000_000 bytes
+```
+
+3. **Mixed Column Counts**:
+```python
+# For a mix of tables with varying column counts
+batcher = SQLBatcher(
+    adapter=adapter,
+    max_bytes=1_000_000,
+    auto_adjust_for_columns=True,
+    reference_column_count=10,
+    min_adjustment_factor=0.5,
+    max_adjustment_factor=2.0,
+)
+# The adjustment factor will be clamped between 0.5 and 2.0
+```
+
+#### Best Practices
+
+1. **Setting Reference Column Count**:
+   - Set it to the median number of columns in your tables
+   - Consider the most common table structure in your application
+   - Adjust based on performance testing
+
+2. **Adjustment Factors**:
+   - Use `min_adjustment_factor` to prevent batches from becoming too small
+   - Use `max_adjustment_factor` to prevent batches from becoming too large
+   - Consider memory constraints when setting these values
+
+3. **Monitoring and Tuning**:
+   - Monitor batch sizes and performance
+   - Adjust parameters based on actual usage patterns
+   - Consider the impact on memory usage
+
+4. **Performance Considerations**:
+   - Larger batches are more efficient for fewer columns
+   - Smaller batches are better for many columns
+   - Balance between memory usage and performance
+
+For detailed information about memory usage considerations and optimization strategies, see [Memory Usage Considerations for Column-Aware Batching](docs/column_aware_batching_memory.md).
 
 ### 4. Query Collection and Monitoring
 Track and analyze your SQL operations with detailed metrics:
@@ -274,6 +378,189 @@ adapter = GenericAdapter(
 )
 ```
 
+### 5. Context Manager Support
+SQL Batcher provides context manager support for clean resource management and automatic batch flushing. This is particularly useful when you want to ensure proper cleanup of resources and automatic flushing of any remaining batches.
+
+#### Basic Usage
+```python
+from sql_batcher import AsyncSQLBatcher
+from sql_batcher.adapters import AsyncPostgreSQLAdapter
+
+# Create adapter and batcher
+adapter = AsyncPostgreSQLAdapter(dsn="postgresql://user:pass@localhost:5432/db")
+batcher = AsyncSQLBatcher(adapter=adapter)
+
+# Use context manager
+async with batcher as b:
+    # Add statements
+    b.add_statement("INSERT INTO users (name) VALUES ('John')")
+    b.add_statement("INSERT INTO users (name) VALUES ('Jane')")
+    
+    # Batches are automatically flushed on exit
+    # Resources are automatically cleaned up
+```
+
+#### Error Handling
+The context manager ensures proper cleanup even when errors occur:
+```python
+async with batcher as b:
+    try:
+        b.add_statement("INSERT INTO users (name) VALUES ('John')")
+        # If an error occurs here, the context manager will:
+        # 1. Flush any remaining batches
+        # 2. Execute error hooks
+        # 3. Clean up resources
+        raise Exception("Something went wrong")
+    except Exception as e:
+        # Handle the error
+        print(f"Error: {e}")
+```
+
+#### Plugin Integration
+The context manager works seamlessly with plugins:
+```python
+from sql_batcher.plugins import SQLPreprocessor, MetricsCollector
+
+# Create batcher with plugins
+batcher = AsyncSQLBatcher(adapter=adapter)
+batcher.register_plugin(SQLPreprocessor(lambda sql: sql.upper()))
+batcher.register_plugin(MetricsCollector())
+
+async with batcher as b:
+    # Plugins are initialized when entering the context
+    # and cleaned up when exiting
+    b.add_statement("INSERT INTO users (name) VALUES ('John')")
+```
+
+#### Best Practices
+1. Always use the context manager when possible to ensure proper resource cleanup
+2. Register plugins before entering the context
+3. Handle errors appropriately within the context
+4. Don't rely on the context manager for transaction management - use the adapter's transaction methods instead
+
+### 6. Savepoint Support
+SQL Batcher provides savepoint functionality for databases that support it. Savepoints allow for more granular transaction control and better error recovery during batch processing.
+
+#### Benefits
+1. **Atomicity**: Each batch is atomic - either all statements succeed or none do
+2. **Error Recovery**: On error, we can roll back to the start of the batch without losing the entire transaction
+3. **Performance**: No need to retry the entire batch on a single statement failure
+4. **Consistency**: Maintains database consistency even with partial failures
+5. **Granular Control**: Allows for more precise error handling and recovery
+
+#### Usage
+```python
+from sql_batcher import AsyncSQLBatcher
+from sql_batcher.adapters import AsyncPostgreSQLAdapter
+
+# Create adapter and batcher
+adapter = AsyncPostgreSQLAdapter(dsn="postgresql://user:pass@localhost:5432/db")
+batcher = AsyncSQLBatcher(adapter=adapter)
+
+async with batcher as b:
+    # Each batch is automatically wrapped in a savepoint
+    b.add_statement("INSERT INTO users (name) VALUES ('John')")
+    b.add_statement("INSERT INTO users (name) VALUES ('Jane')")
+    
+    # If any statement fails, the batch is rolled back to the savepoint
+    # The transaction remains intact for other batches
+```
+
+#### Adapter Support Matrix
+
+| Adapter | Savepoint Support | Notes |
+|---------|------------------|-------|
+| PostgreSQL | ✅ | Full support for SAVEPOINT, ROLLBACK TO SAVEPOINT, and RELEASE SAVEPOINT |
+| Snowflake | ✅ | Supports savepoints with some limitations on nested transactions |
+| BigQuery | ❌ | Does not support savepoints |
+| Trino | ✅ | Supports savepoints with some limitations on nested transactions |
+| Generic | ⚠️ | Support depends on the underlying database connection |
+
+#### Implementation Details
+The savepoint functionality is implemented at two levels:
+
+1. **Adapter Level**:
+   - Each adapter implements `create_savepoint`, `rollback_to_savepoint`, and `release_savepoint` methods
+   - Adapters that don't support savepoints provide no-op implementations
+   - Error handling and connection state checks are included
+
+2. **Batcher Level**:
+   - Creates a savepoint before processing each batch
+   - Rolls back to savepoint if any statement fails
+   - Releases savepoint after successful batch completion
+   - Maintains existing hook and error handling functionality
+
+#### Best Practices
+1. Use savepoints when processing large batches of statements
+2. Handle errors appropriately to take advantage of savepoint rollback
+3. Be aware of database-specific limitations on savepoints
+4. Monitor savepoint usage in high-concurrency scenarios
+5. Consider the impact on transaction isolation levels
+
+#### Database-Specific Limitations
+
+##### PostgreSQL
+- Full support for savepoints with no significant limitations
+- Supports nested savepoints
+- Savepoints are automatically released when the transaction ends
+- Maximum number of savepoints is limited by available memory
+- Savepoints are not supported in prepared transactions
+
+##### Snowflake
+- Supports savepoints with some limitations:
+  - Nested transactions are not supported
+  - Savepoints must be released in the reverse order they were created
+  - Maximum of 100 savepoints per transaction
+  - Savepoints are not supported in multi-statement transactions
+  - Savepoints are not supported in stored procedures
+
+##### Trino
+- Supports savepoints with some limitations:
+  - Nested transactions are not supported
+  - Savepoints are not supported in multi-statement transactions
+  - Savepoints are not supported in stored procedures
+  - Savepoints are not supported in distributed transactions
+  - Maximum of 50 savepoints per transaction
+
+##### BigQuery
+- Does not support savepoints
+- Alternative approaches:
+  - Use transaction isolation levels
+  - Implement application-level retry logic
+  - Use the RetryManager for error handling
+
+##### Generic Adapter
+- Support depends on the underlying database connection
+- No-op implementations for unsupported databases
+- Can be extended to support specific database features
+
+#### Best Practices for Savepoints
+
+1. **Transaction Management**
+   - Start transactions before using savepoints
+   - Commit or rollback transactions explicitly
+   - Be aware of nested transaction limitations
+
+2. **Error Handling**
+   - Catch and handle exceptions appropriately
+   - Use savepoints for granular error recovery
+   - Implement fallback strategies for unsupported databases
+
+3. **Performance Considerations**
+   - Monitor savepoint usage in high-concurrency scenarios
+   - Be aware of database-specific limits
+   - Consider the impact on transaction isolation levels
+
+4. **Database-Specific Optimizations**
+   - Use database-specific features when available
+   - Implement appropriate workarounds for limitations
+   - Monitor and adjust batch sizes based on database capabilities
+
+5. **Testing and Validation**
+   - Test savepoint functionality with your specific database
+   - Validate error recovery behavior
+   - Monitor performance impact
+
 ## Real-World Use Cases
 
 ### 1. Data Pipeline Optimization
@@ -452,3 +739,255 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Async Support
+
+SQL Batcher provides comprehensive async/await support for modern Python applications. This is particularly valuable for:
+- FastAPI and other async web frameworks
+- High-throughput ETL pipelines
+- Microservices with concurrent database operations
+- Real-time data processing
+
+### Benefits of Async Support
+
+1. **Improved Concurrency**
+   - Handle multiple database operations concurrently
+   - Better resource utilization
+   - Reduced waiting time for I/O operations
+
+2. **Scalability**
+   - Handle more concurrent connections
+   - Better performance under load
+   - Efficient resource management
+
+3. **Modern Python Integration**
+   - Seamless integration with async frameworks
+   - Compatible with asyncio ecosystem
+   - Support for async context managers
+
+### Async Usage Examples
+
+#### Basic Async Usage
+```python
+import asyncio
+from sql_batcher import AsyncSQLBatcher
+from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+
+async def main():
+    # Create async adapter
+    adapter = AsyncPostgreSQLAdapter(
+        dsn="postgresql://user:pass@localhost:5432/dbname",
+        min_size=5,
+        max_size=10
+    )
+
+    # Connect to database
+    await adapter.connect()
+
+    try:
+        # Create async batcher
+        batcher = AsyncSQLBatcher(
+            adapter=adapter,
+            max_bytes=1000000,
+            auto_adjust_for_columns=True
+        )
+
+        # Process statements
+        statements = [
+            "INSERT INTO users VALUES (1, 'Alice')",
+            "INSERT INTO users VALUES (2, 'Bob')"
+        ]
+
+        async def execute_sql(sql):
+            # Execute SQL statement asynchronously
+            pass
+
+        await batcher.process_statements(statements, execute_sql)
+
+    finally:
+        # Disconnect from database
+        await adapter.disconnect()
+
+# Run async code
+asyncio.run(main())
+```
+
+#### Async with FastAPI
+```python
+from fastapi import FastAPI
+from sql_batcher import AsyncSQLBatcher
+from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+
+app = FastAPI()
+
+# Create adapter and batcher
+adapter = AsyncPostgreSQLAdapter(
+    dsn="postgresql://user:pass@localhost:5432/dbname"
+)
+batcher = AsyncSQLBatcher(adapter=adapter)
+
+@app.on_event("startup")
+async def startup():
+    await adapter.connect()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await adapter.disconnect()
+
+@app.post("/users/batch")
+async def create_users(users: List[User]):
+    statements = [
+        f"INSERT INTO users (name, email) VALUES ('{user.name}', '{user.email}')"
+        for user in users
+    ]
+    
+    async def execute_sql(sql):
+        # Execute SQL statement
+        pass
+    
+    await batcher.process_statements(statements, execute_sql)
+    return {"message": "Users created successfully"}
+```
+
+#### Async with Connection Pooling
+```python
+from sql_batcher import AsyncSQLBatcher
+from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+
+async def process_large_dataset():
+    # Create adapter with connection pooling
+    adapter = AsyncPostgreSQLAdapter(
+        dsn="postgresql://user:pass@localhost:5432/dbname",
+        min_size=10,
+        max_size=20,
+        max_queries=50000,
+        max_inactive_connection_lifetime=300.0
+    )
+
+    await adapter.connect()
+
+    try:
+        batcher = AsyncSQLBatcher(adapter=adapter)
+        
+        # Process large dataset in chunks
+        for chunk in data_chunks:
+            statements = generate_statements(chunk)
+            await batcher.process_statements(statements, adapter.execute)
+            
+    finally:
+        await adapter.disconnect()
+```
+
+### Supported Async Adapters
+
+SQL Batcher provides async adapters for all supported databases:
+
+#### PostgreSQL
+```python
+from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
+
+adapter = AsyncPostgreSQLAdapter(
+    dsn="postgresql://user:pass@localhost:5432/dbname",
+    min_size=5,
+    max_size=10
+)
+```
+
+#### Trino
+```python
+from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
+
+adapter = AsyncTrinoAdapter(
+    host="trino.example.com",
+    port=8080,
+    user="trino",
+    catalog="hive",
+    schema="default"
+)
+```
+
+#### Snowflake
+```python
+from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
+
+adapter = AsyncSnowflakeAdapter(
+    account="your_account",
+    user="your_user",
+    password="your_password",
+    warehouse="your_warehouse",
+    database="your_database"
+)
+```
+
+#### BigQuery
+```python
+from sql_batcher.adapters.async_bigquery import AsyncBigQueryAdapter
+
+adapter = AsyncBigQueryAdapter(
+    project_id="your_project",
+    credentials_path="path/to/credentials.json",
+    location="US"
+)
+```
+
+### Performance Considerations
+
+When using async features, consider these performance optimizations:
+
+1. **Connection Pooling**
+   - Configure appropriate pool sizes
+   - Monitor connection usage
+   - Adjust timeouts and limits
+
+2. **Batch Sizes**
+   - Adjust batch sizes based on your workload
+   - Monitor memory usage
+   - Consider network latency
+
+3. **Error Handling**
+   - Implement proper error handling
+   - Use retry mechanisms
+   - Monitor failed operations
+
+4. **Resource Management**
+   - Use async context managers
+   - Properly close connections
+   - Monitor resource usage
+
+## Testing
+
+SQL Batcher includes a comprehensive test suite to ensure reliability and correctness. The test suite consists of unit tests, integration tests, and performance benchmarks.
+
+### Test Structure
+
+```
+tests/
+├── test_async_adapters.py    # Unit tests for async database adapters
+├── test_async_batcher.py     # Unit tests for async batcher functionality
+├── test_async_integration.py # Integration tests with real databases
+└── conftest.py              # Shared test fixtures and configuration
+```
+
+### Running Tests
+
+#### Prerequisites
+
+1. Install test dependencies:
+```bash
+pip install -e ".[test]"
+```
+
+2. Install development tools:
+```bash
+pip install pytest pytest-asyncio pytest-cov
+```
+
+#### Unit Tests
+
+Run all unit tests:
+```bash
+pytest tests/
+```
+
+Run with coverage report:
+```
