@@ -34,7 +34,14 @@ def run_core_tests(options: List[str] = None) -> int:
         "tests/test_insert_merger.py",
         "tests/test_query_collector.py",
         "tests/test_retry_manager.py",
-        "-k", "not postgresql and not snowflake and not trino and not bigquery"
+        "tests/test_batch_manager.py",
+        "-k", "not postgresql and not snowflake and not trino and not bigquery",
+        "--ignore=tests/test_async_integration.py",
+        "--ignore=tests/test_postgresql_adapter.py",
+        "--ignore=tests/test_snowflake_adapter.py",
+        "--ignore=tests/test_trino_adapter.py",
+        "--ignore=tests/test_bigquery_adapter.py",
+        "--ignore=tests/*.bak"
     ]
 
     if options:
