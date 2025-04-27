@@ -25,15 +25,15 @@ class TestPlugin(Plugin):
 
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
-        async def pre_batch_hook(context: HookContext) -> None:
+        async def pre_execute_hook(context: HookContext) -> None:
             self.initialized = True
 
-        async def post_batch_hook(context: HookContext) -> None:
+        async def post_execute_hook(context: HookContext) -> None:
             self.cleaned_up = True
 
         return {
-            HookType.PRE_BATCH: [pre_batch_hook],
-            HookType.POST_BATCH: [post_batch_hook],
+            HookType.PRE_EXECUTE: [pre_execute_hook],
+            HookType.POST_EXECUTE: [post_execute_hook],
         }
 
 
@@ -168,7 +168,7 @@ async def test_context_manager_with_plugin_error(mock_adapter):
             async def error_hook(context: HookContext) -> None:
                 raise Exception("Plugin error")
 
-            return {HookType.PRE_BATCH: [error_hook]}
+            return {HookType.PRE_EXECUTE: [error_hook]}
 
     # Create batcher with error plugin
     batcher = AsyncSQLBatcher(mock_adapter)
