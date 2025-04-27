@@ -9,6 +9,7 @@ This example demonstrates:
 """
 
 import os
+import re
 import sqlite3
 import time
 from typing import Any, List, Tuple
@@ -33,10 +34,34 @@ class SQLiteAdapter(SQLAdapter):
             self.connection = sqlite3.connect(self.db_path)
             self.cursor = self.connection.cursor()
 
-        self.cursor.execute(sql)
-        if self.cursor.description:
-            return self.cursor.fetchall()
-        return []
+        # Split multiple statements and execute them one at a time
+        statements = sql.split(";")
+        results = []
+
+        try:
+            # Start transaction
+            self.connection.execute("BEGIN TRANSACTION")
+
+            for statement in statements:
+                statement = statement.strip()
+                if not statement:
+                    continue
+
+                # Execute the statement directly
+                self.cursor.execute(statement)
+
+                if self.cursor.description:
+                    results.extend(self.cursor.fetchall())
+
+            # Commit transaction
+            self.connection.commit()
+
+        except Exception as e:
+            # Rollback on error
+            self.connection.rollback()
+            raise e
+
+        return results
 
     def get_max_query_size(self) -> int:
         """Get maximum query size."""
@@ -64,13 +89,13 @@ def create_test_table(adapter: SQLiteAdapter) -> None:
     )
 
 
-def generate_insert_statements(count: int) -> List[str]:
+def generate_insert_statements(count: int, start_id: int = 0) -> List[str]:
     """Generate test INSERT statements."""
     statements = []
     for i in range(count):
         statements.append(
             f"INSERT INTO users (id, name, email) "
-            f"VALUES ({i}, 'User {i}', 'user{i}@example.com')"
+            f"VALUES ({start_id + i}, 'User {start_id + i}', 'user{start_id + i}@example.com')"
         )
     return statements
 
@@ -96,13 +121,15 @@ def run_demo() -> None:
     collector = QueryCollector()
     batcher = SQLBatcher(
         adapter=adapter,
-        max_bytes=1_000_000,
-        batch_mode=True,
-        _collector=collector,  # Use _collector to avoid passing to QueryCollector
+        max_bytes=1000,  # Use a smaller batch size for non-merged mode
+        batch_mode=False,  # Disable batch mode for first test
+        dry_run=False,
+        auto_adjust_for_columns=True,
     )
 
     start_time = time.time()
-    batcher.process_statements(statements, adapter.execute)
+    for stmt in statements:  # Process one statement at a time
+        batcher.process_statements([stmt], adapter.execute)
     end_time = time.time()
 
     stats = collector.get_stats()
@@ -113,19 +140,26 @@ def run_demo() -> None:
 
     # Clear the table
     adapter.execute("DELETE FROM users")
+    adapter.connection.commit()  # Ensure the delete is committed
 
     # Test 2: With insert merging
     print("\nTest 2: With insert merging")
     collector = QueryCollector()  # Reset collector
     batcher = SQLBatcher(
         adapter=adapter,
-        max_bytes=1_000_000,
-        batch_mode=True,
-        _collector=collector,  # Use _collector to avoid passing to QueryCollector
+        max_bytes=1_000_000,  # Use a larger batch size for merged mode
+        batch_mode=True,  # Enable batch mode for second test
+        dry_run=False,
+        auto_adjust_for_columns=True,
     )
 
+    # Generate new statements with different IDs
+    statements = generate_insert_statements(1000, start_id=1000)
+
     start_time = time.time()
-    batcher.process_statements(statements, adapter.execute)
+    batcher.process_statements(
+        statements, adapter.execute
+    )  # Process all statements at once
     end_time = time.time()
 
     stats = collector.get_stats()
