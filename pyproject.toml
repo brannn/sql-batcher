@@ -30,6 +30,7 @@ dev = [
 ]
 postgresql = [
     "psycopg2-binary",
+    "asyncpg",
 ]
 snowflake = [
     "snowflake-connector-python",

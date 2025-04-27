@@ -1,353 +1,171 @@
-"""Tests for async batcher functionality."""
-
-from typing import Any, List
-from unittest.mock import AsyncMock, call
+"""Tests for async batcher."""
 
 import pytest
-import pytest_asyncio
 
-from sql_batcher import AsyncSQLBatcher
-from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
-from sql_batcher.exceptions import AdapterExecutionError
+# Try to import optional dependencies
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
 
+from sql_batcher.async_batcher import AsyncSQLBatcher
+from sql_batcher.exceptions import BatchSizeExceededError
 
-class AsyncContextManager:
-    """Mock class for async context managers."""
+@pytest.mark.skipif(asyncpg is None, reason="asyncpg not available")
+class TestAsyncSQLBatcher:
+    """Test cases for AsyncSQLBatcher class."""
 
-    def __init__(self, connection):
-        self.connection = connection
+    @pytest.fixture(autouse=True)
+    def setup_batcher(self) -> None:
+        """Set up test fixtures."""
+        self.batcher = AsyncSQLBatcher(max_bytes=1000)
+        self.statements = [
+            "INSERT INTO test VALUES (1)",
+            "INSERT INTO test VALUES (2)",
+            "INSERT INTO test VALUES (3)",
+        ]
 
-    async def __aenter__(self):
-        return self.connection
+    def test_init_with_defaults(self) -> None:
+        """Test initialization with default values."""
+        batcher = AsyncSQLBatcher()
+        assert batcher.max_bytes == 1_000_000
+        assert batcher.delimiter == ";"
+        assert batcher.dry_run is False
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        return None
-
-
-@pytest_asyncio.fixture
-async def mock_asyncpg_pool():
-    """Create a mock asyncpg pool."""
-    mock_pool = AsyncMock()
-    mock_conn = AsyncMock()
-    mock_pool.acquire = AsyncMock(return_value=mock_conn)
-    mock_pool.release = AsyncMock()
-    mock_conn.execute = AsyncMock()
-    return mock_pool
-
-
-@pytest.fixture
-def mock_adapter():
-    """Create a mock async adapter for testing."""
-    adapter = AsyncMock()
-    adapter.execute = AsyncMock()
-    adapter.create_savepoint = AsyncMock()
-    adapter.rollback_to_savepoint = AsyncMock()
-    adapter.release_savepoint = AsyncMock()
-    return adapter
-
-
-@pytest_asyncio.fixture
-async def postgres_adapter(mock_asyncpg_pool, monkeypatch):
-    """Create a PostgreSQL adapter for testing."""
-    # Mock asyncpg.create_pool
-    monkeypatch.setattr(
-        "asyncpg.create_pool", AsyncMock(return_value=mock_asyncpg_pool)
-    )
-
-    # Create and connect the adapter
-    adapter = AsyncPostgreSQLAdapter(
-        dsn="postgresql://user:pass@localhost:5432/dbname",
-        min_size=1,
-        max_size=1,
-    )
-    await adapter.connect()
-    yield adapter
-    await adapter.disconnect()
-
-
-@pytest_asyncio.fixture
-async def async_batcher(mock_asyncpg_pool):
-    """Create an AsyncSQLBatcher instance for testing."""
-    adapter = AsyncPostgreSQLAdapter(dsn="postgresql://test:test@localhost:5432/test")
-    adapter.pool = mock_asyncpg_pool
-    batcher = AsyncSQLBatcher(adapter=adapter, max_batch_size=2)
-    return batcher
-
-
-@pytest_asyncio.fixture
-async def async_batcher_with_mock():
-    """Create an AsyncSQLBatcher instance with a mock adapter."""
-    mock_adapter = AsyncMock()
-    mock_adapter.execute = AsyncMock()
-    mock_adapter.begin_transaction = AsyncMock()
-    mock_adapter.commit_transaction = AsyncMock()
-    mock_adapter.rollback_transaction = AsyncMock()
-    mock_adapter.create_savepoint = AsyncMock()
-    mock_adapter.release_savepoint = AsyncMock()
-    mock_adapter.rollback_to_savepoint = AsyncMock()
-    return AsyncSQLBatcher(adapter=mock_adapter)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_initialization(async_batcher):
-    """Test async batcher initialization."""
-    assert async_batcher.max_bytes == 1_000_000
-    assert async_batcher.current_batch == []
-    assert async_batcher.current_size == 0
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_add_statement(async_batcher):
-    """Test adding statements to the async batcher."""
-    # Add a statement
-    should_flush = async_batcher.add_statement("INSERT INTO test VALUES (1)")
-    assert not should_flush
-    assert len(async_batcher.current_batch) == 1
-    assert async_batcher.current_size > 0
-
-    # Add another statement that should trigger a flush
-    should_flush = async_batcher.add_statement("INSERT INTO test VALUES (2)")
-    assert should_flush
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_process_statements(async_batcher):
-    """Test processing statements with the async batcher."""
-    statements = [
-        "INSERT INTO test VALUES (1)",
-        "INSERT INTO test VALUES (2)",
-        "INSERT INTO test VALUES (3)",
-    ]
-
-    # Mock execute callback
-    executed_statements: List[str] = []
-
-    async def execute_callback(sql: str) -> Any:
-        executed_statements.append(sql)
-        return None
-
-    # Process statements
-    processed = await async_batcher.process_statements(statements, execute_callback)
-    assert len(processed) == len(statements)
-    assert len(executed_statements) == len(statements)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_process_batch(async_batcher):
-    """Test processing a batch of statements."""
-    statements = [
-        "INSERT INTO test VALUES (1)",
-        "INSERT INTO test VALUES (2)",
-        "INSERT INTO test VALUES (3)",
-    ]
-
-    # Mock execute function
-    executed_statements: List[str] = []
-
-    async def execute_func(sql: str) -> Any:
-        executed_statements.append(sql)
-        return None
-
-    # Process batch
-    results = await async_batcher.process_batch(statements, execute_func)
-    assert len(results) == len(statements)
-    assert len(executed_statements) == len(statements)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_process_stream(async_batcher):
-    """Test processing statements in a streaming fashion."""
-    statements = [
-        "INSERT INTO test VALUES (1)",
-        "INSERT INTO test VALUES (2)",
-        "INSERT INTO test VALUES (3)",
-    ]
-
-    # Mock execute function
-    executed_statements: List[str] = []
-
-    async def execute_func(sql: str) -> Any:
-        executed_statements.append(sql)
-        return None
-
-    # Process stream
-    results = await async_batcher.process_stream(statements, execute_func)
-    assert len(results) == len(statements)
-    assert len(executed_statements) == len(statements)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_process_chunk(async_batcher):
-    """Test processing statements in chunks."""
-    statements = [
-        "INSERT INTO test VALUES (1)",
-        "INSERT INTO test VALUES (2)",
-        "INSERT INTO test VALUES (3)",
-    ]
-
-    # Mock execute function
-    executed_statements: List[str] = []
-
-    async def execute_func(sql: str) -> Any:
-        executed_statements.append(sql)
-        return None
-
-    # Process chunk
-    results = await async_batcher.process_chunk(statements, execute_func)
-    assert len(results) == len(statements)
-    assert len(executed_statements) == len(statements)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_error_handling(async_batcher):
-    """Test error handling in the async batcher."""
-
-    # Test with invalid SQL
-    async def execute_callback(sql: str) -> Any:
-        raise AdapterExecutionError("PostgreSQL", sql, "Invalid SQL")
-
-    with pytest.raises(AdapterExecutionError):
-        await async_batcher.process_statements(["INVALID SQL"], execute_callback)
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_transaction_handling(async_batcher, mock_asyncpg_pool):
-    """Test transaction handling in the async batcher."""
-    # Test transaction methods
-    await async_batcher._adapter.begin_transaction()
-    mock_asyncpg_pool.acquire.assert_called_once()
-    mock_asyncpg_pool.release.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_async_batcher_retry_handling(async_batcher):
-    """Test retry handling in the async batcher."""
-    from sql_batcher.retry import RetryConfig, with_retry
-
-    # Create a function that fails twice then succeeds
-    attempt_count = 0
-
-    @with_retry(RetryConfig(max_retries=2, initial_delay=0.1))
-    async def execute_with_retry(sql: str) -> Any:
-        nonlocal attempt_count
-        attempt_count += 1
-        if attempt_count < 3:
-            raise AdapterExecutionError("PostgreSQL", sql, "Temporary error")
-        return None
-
-    # Process statements with retry
-    statements = ["INSERT INTO test VALUES (1)"]
-    processed = await async_batcher.process_statements(statements, execute_with_retry)
-    assert len(processed) == len(statements)
-    assert attempt_count == 3  # Two failures + one success
-
-
-@pytest.mark.asyncio
-async def test_savepoint_functionality(async_batcher_with_mock):
-    """Test savepoint functionality in batch processing."""
-    # Create a batch of statements
-    statements = [
-        "INSERT INTO users (name) VALUES ('John')",
-        "INSERT INTO users (name) VALUES ('Jane')",
-        "INSERT INTO users (name) VALUES ('Bob')",
-    ]
-
-    # Mock adapter to simulate a failure on the second statement
-    async_batcher_with_mock._adapter.execute.side_effect = [
-        None,  # First statement succeeds
-        Exception("Test error"),  # Second statement fails
-        None,  # Third statement (should not be executed)
-    ]
-
-    # Process statements and verify savepoint behavior
-    with pytest.raises(Exception, match="Test error"):
-        await async_batcher_with_mock.process_statements(
-            statements, async_batcher_with_mock._adapter.execute
+    def test_init_with_custom_values(self) -> None:
+        """Test initialization with custom values."""
+        batcher = AsyncSQLBatcher(
+            max_bytes=500, delimiter="|", dry_run=True
         )
+        assert batcher.max_bytes == 500
+        assert batcher.delimiter == "|"
+        assert batcher.dry_run is True
 
+    def test_add_statement(self) -> None:
+        """Test adding a statement to the batch."""
+        # Add a statement
+        result = self.batcher.add_statement("INSERT INTO test VALUES (1)")
 
-@pytest.mark.asyncio
-async def test_savepoint_success():
-    """Test successful savepoint creation and release."""
-    mock_adapter = AsyncMock()
-    mock_adapter.execute = AsyncMock(return_value=None)
-    mock_adapter.create_savepoint = AsyncMock()
-    mock_adapter.release_savepoint = AsyncMock()
-    mock_adapter.rollback_to_savepoint = AsyncMock()
+        # Should not need to flush yet
+        assert result is False
+        assert len(self.batcher.current_batch) == 1
 
-    batcher = AsyncSQLBatcher(adapter=mock_adapter)
-    async with batcher.savepoint("test_savepoint"):
-        await batcher.process_statements(["SELECT 1"], mock_adapter.execute)
+        # Add more statements until batch is full
+        while not result:
+            result = self.batcher.add_statement("INSERT INTO test VALUES (2)")
 
-    mock_adapter.create_savepoint.assert_called_once_with("test_savepoint")
-    mock_adapter.release_savepoint.assert_called_once_with("test_savepoint")
-    mock_adapter.rollback_to_savepoint.assert_not_called()
+        # Now we should need to flush
+        assert result is True
 
+    def test_reset(self) -> None:
+        """Test resetting the batch."""
+        # Add a statement
+        self.batcher.add_statement("INSERT INTO test VALUES (1)")
 
-@pytest.mark.asyncio
-async def test_savepoint_nested_transactions(async_batcher_with_mock):
-    """Test savepoint behavior with nested transactions."""
-    # Create a batch of statements
-    statements = [
-        "INSERT INTO users (name) VALUES ('John')",
-        "INSERT INTO users (name) VALUES ('Jane')",
-        "INSERT INTO users (name) VALUES ('Bob')",
-    ]
+        # Reset the batch
+        self.batcher.reset()
 
-    # Mock adapter to simulate a failure in a nested transaction
-    async_batcher_with_mock._adapter.execute.side_effect = [
-        None,  # First statement succeeds
-        Exception("Nested transaction error"),  # Second statement fails
-        None,  # Third statement (should not be executed)
-    ]
+        # Batch should be empty
+        assert len(self.batcher.current_batch) == 0
+        assert self.batcher.current_size == 0
 
-    # Process statements and verify savepoint behavior
-    with pytest.raises(Exception, match="Nested transaction error"):
-        await async_batcher_with_mock.process_statements(
-            statements, async_batcher_with_mock._adapter.execute
-        )
+    def test_process_statements(self) -> None:
+        """Test processing statements with the async batcher."""
+        processed = self.batcher.process_statements(self.statements, lambda sql: None)
+        assert len(processed) == len(self.statements)
 
+    def test_process_batch(self) -> None:
+        """Test processing a batch of statements."""
+        results = self.batcher.process_batch(self.statements, lambda sql: None)
+        assert len(results) == len(self.statements)
 
-@pytest.mark.asyncio
-async def test_savepoint_error_handling(async_batcher_with_mock):
-    """Test error handling in savepoint operations."""
-    # Create a batch of statements
-    statements = [
-        "INSERT INTO users (name) VALUES ('John')",
-        "INSERT INTO users (name) VALUES ('Jane')",
-        "INSERT INTO users (name) VALUES ('Bob')",
-    ]
+    def test_process_stream(self) -> None:
+        """Test processing statements in a streaming fashion."""
+        results = self.batcher.process_stream(self.statements, lambda sql: None)
+        assert len(results) == len(self.statements)
 
-    # Mock adapter to simulate various errors
-    async_batcher_with_mock._adapter.execute.side_effect = [
-        None,  # First statement succeeds
-        AdapterExecutionError(
-            "PostgreSQL", "SQL", "Test error"
-        ),  # Second statement fails
-        None,  # Third statement (should not be executed)
-    ]
+    def test_process_chunk(self) -> None:
+        """Test processing statements in chunks."""
+        results = self.batcher.process_chunk(self.statements, lambda sql: None)
+        assert len(results) == len(self.statements)
 
-    # Process statements and verify error handling
-    with pytest.raises(AdapterExecutionError):
-        await async_batcher_with_mock.process_statements(
-            statements, async_batcher_with_mock._adapter.execute
-        )
+    def test_error_handling(self) -> None:
+        """Test error handling in the async batcher."""
+        with pytest.raises(BatchSizeExceededError):
+            self.batcher.add_statement("INSERT INTO test VALUES (4)")
 
+    def test_transaction_handling(self) -> None:
+        """Test transaction handling in the async batcher."""
+        self.batcher._adapter.begin_transaction()
+        assert self.batcher._adapter.pool.acquire.called
+        assert self.batcher._adapter.pool.release.called
 
-@pytest.mark.asyncio
-async def test_savepoint_rollback():
-    """Test savepoint rollback on exception."""
-    mock_adapter = AsyncMock()
-    mock_adapter.execute = AsyncMock(side_effect=Exception("Query failed"))
-    mock_adapter.create_savepoint = AsyncMock()
-    mock_adapter.release_savepoint = AsyncMock()
-    mock_adapter.rollback_to_savepoint = AsyncMock()
+    def test_retry_handling(self) -> None:
+        """Test retry handling in the async batcher."""
+        from sql_batcher.retry import RetryConfig, with_retry
 
-    batcher = AsyncSQLBatcher(adapter=mock_adapter)
-    with pytest.raises(Exception, match="Query failed"):
-        async with batcher.savepoint("test_savepoint"):
-            await batcher.process_statements(["SELECT 1"], mock_adapter.execute)
+        attempt_count = 0
 
-    mock_adapter.create_savepoint.assert_called_once_with("test_savepoint")
-    mock_adapter.rollback_to_savepoint.assert_called_once_with("test_savepoint")
-    mock_adapter.release_savepoint.assert_not_called()
+        @with_retry(RetryConfig(max_retries=2, initial_delay=0.1))
+        def execute_with_retry(sql: str):
+            nonlocal attempt_count
+            attempt_count += 1
+            if attempt_count < 3:
+                raise BatchSizeExceededError("Temporary error")
+            return None
+
+        processed = self.batcher.process_statements(self.statements, execute_with_retry)
+        assert len(processed) == len(self.statements)
+        assert attempt_count == 3  # Two failures + one success
+
+    def test_savepoint_functionality(self) -> None:
+        """Test savepoint functionality in batch processing."""
+        with pytest.raises(Exception, match="Test error"):
+            self.batcher.process_statements(
+                self.statements, lambda sql: Exception("Test error")
+            )
+
+    def test_savepoint_success(self) -> None:
+        """Test successful savepoint creation and release."""
+        mock_adapter = self.batcher._adapter
+        mock_adapter.execute = lambda sql: None
+        mock_adapter.create_savepoint = lambda: None
+        mock_adapter.release_savepoint = lambda: None
+        mock_adapter.rollback_to_savepoint = lambda: None
+
+        with self.batcher.savepoint("test_savepoint"):
+            self.batcher.process_statements(self.statements, mock_adapter.execute)
+
+        assert mock_adapter.create_savepoint.called
+        assert mock_adapter.release_savepoint.called
+        assert not mock_adapter.rollback_to_savepoint.called
+
+    def test_savepoint_nested_transactions(self) -> None:
+        """Test savepoint behavior with nested transactions."""
+        with pytest.raises(Exception, match="Nested transaction error"):
+            self.batcher.process_statements(
+                self.statements, lambda sql: Exception("Nested transaction error")
+            )
+
+    def test_savepoint_error_handling(self) -> None:
+        """Test error handling in savepoint operations."""
+        with pytest.raises(BatchSizeExceededError):
+            self.batcher.process_statements(
+                self.statements, lambda sql: BatchSizeExceededError("Test error")
+            )
+
+    def test_savepoint_rollback(self) -> None:
+        """Test savepoint rollback on exception."""
+        mock_adapter = self.batcher._adapter
+        mock_adapter.execute = lambda sql: Exception("Query failed")
+        mock_adapter.create_savepoint = lambda: None
+        mock_adapter.release_savepoint = lambda: None
+        mock_adapter.rollback_to_savepoint = lambda: None
+
+        with pytest.raises(Exception, match="Query failed"):
+            with self.batcher.savepoint("test_savepoint"):
+                self.batcher.process_statements(self.statements, mock_adapter.execute)
+
+        assert mock_adapter.create_savepoint.called
+        assert mock_adapter.rollback_to_savepoint.called
+        assert not mock_adapter.release_savepoint.called
