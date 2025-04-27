@@ -89,6 +89,141 @@ print(f"Average batch size: {stats['avg_batch_size']}")
 print(f"Total execution time: {stats['total_time']}")
 ```
 
+#### Detailed Query Analysis
+The QueryCollector provides comprehensive insights into your SQL operations:
+
+```python
+# Create collector with custom settings
+collector = QueryCollector(
+    delimiter=";",
+    dry_run=False,
+    reference_column_count=10
+)
+
+# Process statements with detailed tracking
+batcher.process_statements(statements, adapter.execute, collector)
+
+# Get detailed query information
+for query in collector.get_queries():
+    print(f"\nQuery Details:")
+    print(f"SQL: {query.sql[:100]}...")  # First 100 chars
+    print(f"Execution Time: {query.execution_time:.3f} seconds")
+    print(f"Batch Size: {query.batch_size}")
+    print(f"Memory Usage: {query.memory_usage} bytes")
+    print(f"Success: {query.success}")
+    if query.error:
+        print(f"Error: {query.error}")
+
+# Get aggregated statistics
+stats = collector.get_stats()
+print("\nAggregated Statistics:")
+print(f"Total Queries: {stats['count']}")
+print(f"Average Batch Size: {stats['avg_batch_size']}")
+print(f"Total Execution Time: {stats['total_time']:.2f} seconds")
+print(f"Average Query Time: {stats['avg_query_time']:.3f} seconds")
+print(f"Total Memory Usage: {stats['total_memory_usage']} bytes")
+print(f"Success Rate: {stats['success_rate']:.1%}")
+```
+
+Example output:
+```
+Query Details:
+SQL: INSERT INTO users (id, name, email) VALUES (1, 'User 1', 'user1@example.com'), (2, 'User 2', 'user2@example.com')...
+Execution Time: 0.023 seconds
+Batch Size: 1000
+Memory Usage: 1024 bytes
+Success: True
+
+Query Details:
+SQL: INSERT INTO users (id, name, email) VALUES (1001, 'User 1001', 'user1001@example.com'), (1002, 'User 1002', 'user1002@example.com')...
+Execution Time: 0.025 seconds
+Batch Size: 1000
+Memory Usage: 1024 bytes
+Success: True
+
+Aggregated Statistics:
+Total Queries: 10
+Average Batch Size: 1000
+Total Execution Time: 0.25 seconds
+Average Query Time: 0.024 seconds
+Total Memory Usage: 10240 bytes
+Success Rate: 100.0%
+```
+
+#### Performance Monitoring
+Use the QueryCollector to monitor and optimize performance:
+
+```python
+def optimize_batch_size(collector: QueryCollector, target_time: float = 0.1):
+    stats = collector.get_stats()
+    avg_time = stats['avg_query_time']
+    
+    if avg_time > target_time:
+        # Reduce batch size if queries are too slow
+        return int(stats['avg_batch_size'] * 0.8)
+    elif avg_time < target_time * 0.5:
+        # Increase batch size if queries are too fast
+        return int(stats['avg_batch_size'] * 1.2)
+    return stats['avg_batch_size']
+
+# Monitor and adjust batch size
+collector = QueryCollector()
+for batch in data_batches:
+    batcher.process_statements(batch, adapter.execute, collector)
+    
+    # Adjust batch size based on performance
+    new_batch_size = optimize_batch_size(collector)
+    batcher.set_batch_size(new_batch_size)
+    
+    # Print performance metrics
+    stats = collector.get_stats()
+    print(f"Batch Size: {stats['avg_batch_size']}")
+    print(f"Average Query Time: {stats['avg_query_time']:.3f} seconds")
+    print(f"Memory Usage: {stats['total_memory_usage']} bytes")
+```
+
+#### Error Tracking
+The QueryCollector helps identify and debug issues:
+
+```python
+collector = QueryCollector()
+try:
+    batcher.process_statements(statements, adapter.execute, collector)
+except Exception as e:
+    print("Error occurred. Analyzing failed queries...")
+    
+    # Get failed queries
+    failed_queries = [q for q in collector.get_queries() if not q.success]
+    print(f"\nFailed Queries: {len(failed_queries)}")
+    
+    for query in failed_queries:
+        print(f"\nFailed Query:")
+        print(f"SQL: {query.sql[:100]}...")
+        print(f"Error: {query.error}")
+        print(f"Execution Time: {query.execution_time:.3f} seconds")
+        print(f"Batch Size: {query.batch_size}")
+```
+
+Example error output:
+```
+Error occurred. Analyzing failed queries...
+
+Failed Queries: 1
+
+Failed Query:
+SQL: INSERT INTO users (id, name, email) VALUES (1001, 'User 1001', 'user1001@example.com')...
+Error: UNIQUE constraint failed: users.id
+Execution Time: 0.015 seconds
+Batch Size: 1
+```
+
+The QueryCollector is particularly useful for:
+1. Performance optimization
+2. Debugging issues
+3. Monitoring long-running operations
+4. Generating execution reports
+5. Identifying problematic queries
+
 ### 5. Database Adapters
 SQL Batcher provides optimized adapters for popular databases:
 
