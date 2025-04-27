@@ -2,16 +2,14 @@
 Tests for SQL adapter base classes.
 """
 
-from typing import Any, List, Optional, Protocol, Tuple, TypeVar
+from typing import Any, List, Optional, Protocol, Tuple
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
 
-from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
+from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter, T
 from sql_batcher.adapters.generic import GenericAdapter
-
-T = TypeVar("T")
 
 
 class TestAdapter(Protocol):

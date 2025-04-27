@@ -7,6 +7,8 @@ This module provides abstract base classes for database adapters used by SQL Bat
 from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional, Sequence, TypeVar, Union
 
+__all__ = ["SQLAdapter", "AsyncSQLAdapter", "GenericAdapter", "T"]
+
 T = TypeVar("T")
 
 
