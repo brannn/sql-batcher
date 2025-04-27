@@ -2,7 +2,7 @@
 QueryCollector: A utility class for collecting and tracking SQL queries.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class QueryCollector:
@@ -33,7 +33,7 @@ class QueryCollector:
         max_adjustment_factor: float = 2.0,
     ) -> None:
         """Initialize a QueryCollector."""
-        self.queries: List[str] = []
+        self.queries: List[Dict[str, Any]] = []
         self.current_size: int = 0
         self.column_count: Optional[int] = None
         self.reference_column_count = reference_column_count
@@ -43,26 +43,27 @@ class QueryCollector:
         self.delimiter = delimiter
         self.dry_run = dry_run
 
-    def collect(self, query: str) -> None:
+    def collect(self, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """
         Collect a SQL query.
 
         Parameters:
             query (str): The SQL query to collect.
+            metadata (Optional[Dict[str, Any]]): Optional metadata to associate with the query.
         """
-        self.queries.append(query)
+        self.queries.append({"query": query, "metadata": metadata or {}})
 
     def clear(self) -> None:
         """Clear all collected queries."""
         self.queries = []
         self.current_size = 0
 
-    def get_all(self) -> List[str]:
+    def get_all(self) -> List[Dict[str, Any]]:
         """
         Get all collected queries.
 
         Returns:
-            list: List of all collected queries.
+            list: List of all collected queries with their metadata.
         """
         return self.queries
 
@@ -82,7 +83,7 @@ class QueryCollector:
         Returns:
             list: Current batch of queries.
         """
-        return self.queries
+        return [q["query"] for q in self.queries]
 
     def get_current_size(self) -> int:
         """

@@ -2,20 +2,43 @@
 Tests for SQL adapter base classes.
 """
 
-from typing import Any, Generator, List
+from typing import Any, Generator, List, Protocol, TypeVar
 
 import pytest
+from pytest import FixtureFunction
 
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
 
+T = TypeVar("T")
 
-class TestAdapter(SQLAdapter):
+
+class TestAdapter(Protocol):
+    """Test adapter protocol."""
+
+    def execute(self, sql: str) -> List[Any]:
+        """Execute a SQL statement."""
+        ...
+
+    def get_max_query_size(self) -> int:
+        """Get maximum query size."""
+        ...
+
+    def close(self) -> None:
+        """Close the connection."""
+        ...
+
+    def get_results(self) -> List[str]:
+        """Get executed statements."""
+        ...
+
+
+class TestAdapterImpl:
     """Test adapter implementation."""
 
     def __init__(self) -> None:
         self._max_query_size = 1000
-        self._results: List[Any] = []
+        self._results: List[str] = []
 
     def execute(self, sql: str) -> List[Any]:
         """Execute a SQL statement."""
@@ -36,37 +59,35 @@ class TestAdapter(SQLAdapter):
 
 
 def test_adapter_execute() -> None:
-    """Test basic execution functionality."""
-    adapter = TestAdapter()
+    """Test adapter execute method."""
+    adapter = TestAdapterImpl()
     adapter.execute("SELECT 1")
     assert adapter.get_results() == ["SELECT 1"]
 
 
 def test_adapter_max_query_size() -> None:
-    """Test max query size functionality."""
-    adapter = TestAdapter()
+    """Test adapter max query size."""
+    adapter = TestAdapterImpl()
     assert adapter.get_max_query_size() == 1000
 
 
 def test_adapter_transaction() -> None:
-    """Test transaction management."""
-    adapter = TestAdapter()
-
-    # Default implementations should not raise errors
+    """Test adapter transaction methods."""
+    adapter = TestAdapterImpl()
     adapter.begin_transaction()
     adapter.commit_transaction()
     adapter.rollback_transaction()
 
 
 @pytest.fixture
-def adapter() -> Generator[TestAdapter, None, None]:
-    """Fixture providing a test adapter instance."""
-    adapter = TestAdapter()
+def adapter():
+    """Create a test adapter."""
+    adapter = TestAdapterImpl()
     yield adapter
     adapter.close()
 
 
-def test_adapter_with_fixture(adapter: TestAdapter) -> None:
+def test_adapter_with_fixture(adapter: TestAdapterImpl) -> None:
     """Test adapter using fixture."""
     adapter.execute("SELECT 1")
     assert adapter.get_results() == ["SELECT 1"]
@@ -80,7 +101,7 @@ class TestSQLAdapter:
         """Test that SQLAdapter requires implementing abstract methods."""
         # Should not be able to instantiate the abstract class
         with pytest.raises(TypeError):
-            SQLAdapter()
+            SQLAdapter()  # type: ignore
 
         # Create a minimal implementation
         class MinimalAdapter(SQLAdapter):
@@ -108,7 +129,7 @@ class TestGenericAdapter:
     """Test cases for GenericAdapter."""
 
     @pytest.fixture(autouse=True)
-    def setup_adapter(self, mock_db_connection) -> None:
+    def setup_adapter(self, mock_db_connection: Any) -> None:
         """Set up test fixtures."""
         # Use the mocked database connection from conftest.py
         self.connection = mock_db_connection
@@ -123,7 +144,7 @@ class TestGenericAdapter:
 
     def test_init(self) -> None:
         """Test initialization."""
-        assert self.adapter.max_query_size == 1000
+        assert self.adapter._max_query_size == 1000
 
     def test_get_max_query_size(self) -> None:
         """Test get_max_query_size method."""

@@ -261,43 +261,42 @@ class PostgreSQLAdapter(SQLAdapter):
         return len(data)
 
     def create_indices(
-        self, table_name: str, indices: List[Dict[str, Union[str, List[str]]]]
+        self, table_name: str, indices: List[Dict[str, Union[str, List[str], bool]]]
     ) -> List[str]:
         """
         Create indices on a table.
 
         Args:
-            table_name: Name of the table
+            table_name: Name of the table to create indices on
             indices: List of index definitions, each containing:
-                    - name: Name of the index
-                    - columns: Column or list of columns to index
-                    - type: Optional index type (btree, hash, etc.)
-                    - unique: Optional boolean for unique index
+                - name: Index name
+                - columns: List of column names
+                - type: Index type (btree, hash, etc.)
+                - unique: Whether the index should be unique (optional)
 
         Returns:
-            List of SQL statements executed
+            List of SQL statements to create the indices
         """
-        statements: List[str] = []
+        statements = []
         for index in indices:
-            name = index.get("name")
-            columns = index.get("columns", [])
+            # Extract index properties
+            name = str(index["name"])
+            columns = index["columns"]
+            index_type = str(index.get("type", "btree"))
+            unique = bool(index.get("unique", False))
+
+            # Build the column list
             if isinstance(columns, str):
-                columns = [columns]
+                column_list = columns
+            else:
+                column_list = ", ".join(cast(List[str], columns))
 
-            index_type = index.get("type", "btree")
-            unique = index.get("unique", False)
-
-            if not name or not columns:
-                continue
-
+            # Build the CREATE INDEX statement
             unique_str = "UNIQUE " if unique else ""
-            columns_str = ", ".join(cast(List[str], columns))
-
-            sql = (
-                f"CREATE {unique_str}INDEX {name} "
-                f"ON {table_name} USING {index_type} ({columns_str})"
+            statement = (
+                f"CREATE {unique_str}INDEX {name} ON {table_name} "
+                f"USING {index_type} ({column_list})"
             )
-            statements.append(sql)
-            self.execute(sql)
+            statements.append(statement)
 
         return statements

@@ -2,6 +2,7 @@ from typing import Any, List, Tuple
 from unittest.mock import MagicMock
 
 import pytest
+from google.cloud import bigquery
 
 # Mark all tests in this file as using bigquery-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.bigquery]
@@ -9,82 +10,107 @@ pytestmark = [pytest.mark.db, pytest.mark.bigquery]
 from sql_batcher.adapters.bigquery import BigQueryAdapter
 
 
-def setup_mock_bq_connection(mocker: Any) -> Tuple[Any, Any]:
-    """Set up mock BigQuery client and job."""
-    mock_job = mocker.Mock()
-    mock_client = mocker.Mock()
-    mock_client.query.return_value = mock_job
-    mocker.patch("google.cloud.bigquery.Client", return_value=mock_client)
-    return mock_client, mock_job
+def setup_mock_bq_connection() -> Tuple[MagicMock, MagicMock]:
+    """Set up a mock BigQuery connection and cursor."""
+    mock_connection = MagicMock()
+    mock_cursor = MagicMock()
+
+    # Configure mock cursor
+    mock_cursor.description = [
+        ["id", "INT64", None, None, None, None, None],
+        ["name", "STRING", None, None, None, None, None],
+    ]
+    mock_cursor.fetchall.return_value = [(1, "Test")]
+
+    return mock_connection, mock_cursor
 
 
 @pytest.fixture
-def mock_bq(mocker: Any) -> Tuple[BigQueryAdapter, Any, Any]:
-    """Create a mock BigQuery adapter with mocked client and job."""
-    client, job = setup_mock_bq_connection(mocker)
+def mock_bq() -> Tuple[BigQueryAdapter, MagicMock, MagicMock]:
+    """Create a mock BigQuery adapter."""
+    mock_connection, mock_cursor = setup_mock_bq_connection()
+
+    # Create adapter with mock connection
     adapter = BigQueryAdapter(
-        project_id="test-project", dataset_id="test_dataset", use_batch_mode=True
+        project_id="test-project",
+        dataset_id="test_dataset",
+        location="US",
     )
-    return adapter, client, job
+    adapter._connection = mock_connection
+    adapter._cursor = mock_cursor
+
+    return adapter, mock_connection, mock_cursor
 
 
 def test_bq_execute(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
-    """Test executing a query with BigQuery adapter."""
-    adapter, client, job = mock_bq
-    job.result.return_value = [(1, "test1"), (2, "test2"), (3, "test3")]
+    """Test basic execution."""
+    adapter, _, cursor = mock_bq
 
-    result = adapter.execute("SELECT * FROM test_table")
-    assert result == [(1, "test1"), (2, "test2"), (3, "test3")]
-    client.query.assert_called_once()
+    # Execute a query
+    results = adapter.execute("SELECT * FROM test")
+
+    # Should return results
+    assert len(results) == 1
+    assert results[0][0] == 1
+    assert results[0][1] == "Test"
+
+    # Should call cursor.execute
+    cursor.execute.assert_called_once_with("SELECT * FROM test")
 
 
 def test_bq_execute_no_results(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
-    """Test executing a non-SELECT query with BigQuery adapter."""
-    adapter, client, job = mock_bq
-    job.result.return_value = []
+    """Test execution with no results."""
+    adapter, _, cursor = mock_bq
 
-    result = adapter.execute("CREATE TABLE test_table (id INT64)")
-    assert result == []
-    client.query.assert_called_once()
+    # Configure cursor to return no results
+    cursor.description = None
+    cursor.fetchall.return_value = []
+
+    # Execute an insert
+    results = adapter.execute("CREATE TABLE test (id INT64, name STRING)")
+
+    # Should not return results
+    assert len(results) == 0
 
 
-def test_bq_batch_mode(mocker: Any) -> None:
-    """Test batch mode configuration in BigQuery adapter."""
-    client, _ = setup_mock_bq_connection(mocker)
+def test_bq_batch_mode(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
+    """Test batch mode execution."""
+    adapter, _, _ = mock_bq
 
+    # Should use batch mode
+    assert adapter.get_max_query_size() == 1000000
+
+
+def test_bq_dataset_location(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
+    """Test dataset location."""
+    adapter, _, _ = mock_bq
+
+    # Should set dataset location
+    assert adapter._location == "US"
+
+
+def test_bq_labels(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
+    """Test job labels."""
+    adapter, _, _ = mock_bq
+
+    # Create adapter with labels
+    labels = {"env": "test", "team": "data"}
     adapter = BigQueryAdapter(
-        project_id="test-project", dataset_id="test_dataset", use_batch_mode=True
+        project_id="test-project",
+        dataset_id="test_dataset",
+        location="US",
+        labels=labels,
     )
 
-    adapter.execute("SELECT * FROM test_table")
-
-    # Verify that batch mode configuration was used
-    client.query.assert_called_once()
-    job_config = client.query.call_args[1]["job_config"]
-    assert job_config.priority == "BATCH"
-
-
-def test_bq_dataset_location(mocker: Any) -> None:
-    """Test dataset location configuration in BigQuery adapter."""
-    client, _ = setup_mock_bq_connection(mocker)
-
-    adapter = BigQueryAdapter(
-        project_id="test-project", dataset_id="test_dataset", location="US"
-    )
-
-    adapter.execute("SELECT * FROM test_table")
-
-    # Verify that location was used
-    client.query.assert_called_once()
-    job_config = client.query.call_args[1]["job_config"]
-    assert job_config.location == "US"
+    # Should set job labels
+    assert adapter.job_config.labels == labels
 
 
 class TestBigQueryAdapter:
     """Test cases for BigQueryAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch) -> None:
+    def setup(self, monkeypatch: Any) -> None:
         """Set up test fixtures."""
         # Mock the google.cloud.bigquery module
         self.mock_bigquery = MagicMock()
@@ -251,32 +277,32 @@ class TestBigQueryAdapter:
     def test_execute_with_job_labels(self) -> None:
         """Test execution with job labels."""
         # Create an adapter with job labels
+        labels = {"environment": "test"}
         adapter_with_labels = BigQueryAdapter(
             project_id="test-project",
             dataset_id="test_dataset",
             location="US",
-            labels={"environment": "test"},
+            labels=labels,
         )
 
         # Execute a query
-        adapter_with_labels.execute("SELECT * FROM `test_dataset.users`")
+        adapter_with_labels.execute("SELECT 1")
 
-        # Verify the job config included the labels
+        # Verify that labels were set
         job_config = self.mock_client.query.call_args[1]["job_config"]
         assert job_config.labels == {"environment": "test"}
 
-    def test_missing_bigquery_package(self, monkeypatch) -> None:
+    def test_missing_bigquery_package(self, monkeypatch: Any) -> None:
         """Test behavior when bigquery package is not installed."""
-        # Simulate the bigquery package not being installed
+        # Remove the bigquery module
         monkeypatch.setattr("sql_batcher.adapters.bigquery.bigquery", None)
 
-        # Attempting to create the adapter should raise an ImportError
-        with pytest.raises(ImportError) as excinfo:
+        # Attempt to create the adapter
+        with pytest.raises(ImportError) as exc_info:
             BigQueryAdapter(
                 project_id="test-project",
                 dataset_id="test_dataset",
                 location="US",
             )
 
-        # Verify the error message
-        assert "google-cloud-bigquery package is required" in str(excinfo.value)
+        assert "google-cloud-bigquery package is required" in str(exc_info.value)

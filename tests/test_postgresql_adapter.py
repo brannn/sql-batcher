@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import pytest
 
@@ -75,7 +75,7 @@ def test_pg_create_indices(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
     """Test creating indices with PostgreSQL adapter."""
     adapter, _, cursor = mock_pg
 
-    indices = [
+    indices: List[Dict[str, Union[str, List[str], bool]]] = [
         {"name": "idx_test_id", "columns": ["id"], "type": "btree", "unique": True},
         {"name": "idx_test_name", "columns": ["name"], "type": "hash"},
     ]
@@ -122,7 +122,7 @@ class TestPostgreSQLAdapter:
     """Test cases for PostgreSQLAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch) -> None:
+    def setup(self, monkeypatch: Any) -> None:
         """Set up test fixtures."""
         # Create mock psycopg2 module
         mock_psycopg2 = Mock()
@@ -277,17 +277,18 @@ class TestPostgreSQLAdapter:
         # Check result
         assert version == "12.0"
 
-    def test_missing_psycopg2(self, monkeypatch) -> None:
+    def test_missing_psycopg2(self, monkeypatch: Any) -> None:
         """Test behavior when psycopg2 is not installed."""
-        # Simulate psycopg2 not being installed
+        # Remove the psycopg2 module
         monkeypatch.setattr("sql_batcher.adapters.postgresql.psycopg2", None)
 
-        # Attempting to create the adapter should raise an ImportError
-        with pytest.raises(ImportError) as excinfo:
-            PostgreSQLAdapter(connection_params={"host": "localhost"})
+        # Attempt to create the adapter
+        with pytest.raises(ImportError) as exc_info:
+            PostgreSQLAdapter(
+                connection_params={"host": "localhost", "database": "test"}
+            )
 
-        # Verify the error message
-        assert "psycopg2 package is required" in str(excinfo.value)
+        assert "psycopg2-binary package is required" in str(exc_info.value)
 
     def test_execute_batch(self) -> None:
         """Test executing a batch of statements."""
@@ -295,72 +296,50 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.description = None
 
         # Execute a batch of statements
-        statements = [
-            "INSERT INTO users VALUES (1, 'Alice')",
-            "INSERT INTO users VALUES (2, 'Bob')",
-            "INSERT INTO users VALUES (3, 'Charlie')",
-        ]
-
-        for statement in statements:
-            self.adapter.execute(statement)
+        result = self.adapter.execute(
+            "INSERT INTO users VALUES (1, 'Alice'); INSERT INTO users VALUES (2, 'Bob')"
+        )
 
         # Check behavior
-        assert self.mock_cursor.execute.call_count == 3
-        self.mock_cursor.execute.assert_any_call(
-            "INSERT INTO users VALUES (1, 'Alice')"
+        self.mock_cursor.execute.assert_called_once_with(
+            "INSERT INTO users VALUES (1, 'Alice'); INSERT INTO users VALUES (2, 'Bob')"
         )
-        self.mock_cursor.execute.assert_any_call("INSERT INTO users VALUES (2, 'Bob')")
-        self.mock_cursor.execute.assert_any_call(
-            "INSERT INTO users VALUES (3, 'Charlie')"
-        )
+        assert result == []
 
-    def test_use_copy_for_bulk_insert_stdin(self, monkeypatch) -> None:
+    def test_use_copy_for_bulk_insert_stdin(self, monkeypatch: Any) -> None:
         """Test using COPY for bulk insert from stdin."""
 
         # Mock the use_copy method
-        def mock_use_copy(*args, **kwargs):
+        def mock_use_copy(*args: Any, **kwargs: Any) -> int:
             # Just return the length of the data argument
-            return len(kwargs.get("data", []))
+            return len(kwargs.get("data", ""))
 
-        # Patch the use_copy method
         monkeypatch.setattr(self.adapter, "use_copy", mock_use_copy)
 
-        # Test data
-        data = [
-            (1, "Alice"),
-            (2, "Bob"),
-            (3, "Charlie"),
-        ]
-
-        # Use COPY for bulk insert
+        # Test with some data
+        data = "1,Alice\n2,Bob\n"
         result = self.adapter.use_copy_for_bulk_insert_stdin("users", data)
 
         # Check result
-        assert result == 3
+        assert result == len(data)
 
     def test_create_indices(self) -> None:
         """Test creating indices."""
-        # Test data
-        indices = [
-            {
-                "name": "idx_users_id",
-                "columns": ["id"],
-                "type": "btree",
-                "unique": True,
-            },
-            {
-                "name": "idx_users_name",
-                "columns": ["name"],
-                "type": "hash",
-            },
+        # Create some test indices
+        indices: List[Dict[str, Union[str, List[str], bool]]] = [
+            {"name": "idx_test_id", "columns": ["id"], "type": "btree", "unique": True},
+            {"name": "idx_test_name", "columns": ["name"], "type": "hash"},
         ]
 
-        # Create indices
-        statements = self.adapter.create_indices("users", indices)
+        # Create the indices
+        statements = self.adapter.create_indices("test_table", indices)
 
-        # Check result
+        # Verify the statements
         assert len(statements) == 2
         assert (
-            "CREATE UNIQUE INDEX idx_users_id ON users USING btree (id)" in statements
+            "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)"
+            in statements
         )
-        assert "CREATE INDEX idx_users_name ON users USING hash (name)" in statements
+        assert (
+            "CREATE INDEX idx_test_name ON test_table USING hash (name)" in statements
+        )

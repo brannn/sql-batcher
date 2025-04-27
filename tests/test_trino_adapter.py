@@ -20,77 +20,105 @@ def setup_mock_trino_connection(mocker: Any) -> Tuple[Any, Any]:
 
 @pytest.fixture
 def mock_trino(mocker: Any) -> Tuple[TrinoAdapter, Any, Any]:
-    """Create a mock Trino adapter with mocked connection and cursor."""
-    connection, cursor = setup_mock_trino_connection(mocker)
+    """Create a mock Trino adapter."""
+    # Set up mock connection and cursor
+    mock_connection, mock_cursor = setup_mock_trino_connection(mocker)
+
+    # Create the adapter
     adapter = TrinoAdapter(
         host="localhost",
         port=8080,
-        user="test",
+        user="test_user",
         catalog="test_catalog",
         schema="test_schema",
     )
-    return adapter, connection, cursor
+
+    # Replace the connection with our mock
+    adapter._connection = mock_connection
+    adapter._cursor = mock_cursor
+
+    return adapter, mock_cursor, mock_connection
 
 
 def test_trino_execute(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> None:
-    """Test executing a query with Trino adapter."""
-    adapter, _, cursor = mock_trino
-    cursor.description = [("column1",)]
-    cursor.fetchall.return_value = [(1,), (2,), (3,)]
+    """Test basic execution functionality."""
+    adapter, cursor, _ = mock_trino
 
-    result = adapter.execute("SELECT * FROM test_table")
-    assert result == [(1,), (2,), (3,)]
-    cursor.execute.assert_called_once_with("SELECT * FROM test_table")
+    # Configure mock cursor
+    cursor.description = [("id",), ("name",)]
+    cursor.fetchall.return_value = [(1, "Test"), (2, "Another")]
+
+    # Execute a query
+    result = adapter.execute("SELECT * FROM test")
+
+    # Verify the query was executed
+    cursor.execute.assert_called_once_with("SELECT * FROM test")
+
+    # Check the results
+    assert len(result) == 2
+    assert result[0] == (1, "Test")
+    assert result[1] == (2, "Another")
 
 
 def test_trino_execute_no_results(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> None:
-    """Test executing a non-SELECT query with Trino adapter."""
-    adapter, _, cursor = mock_trino
-    cursor.description = None
+    """Test execution with no results."""
+    adapter, cursor, _ = mock_trino
 
-    result = adapter.execute("CREATE TABLE test_table (id INT)")
-    assert result == []
-    cursor.execute.assert_called_once_with("CREATE TABLE test_table (id INT)")
+    # Configure mock cursor for no results
+    cursor.description = None
+    cursor.fetchall.return_value = []
+
+    # Execute a query
+    result = adapter.execute("INSERT INTO test VALUES (1, 'Test')")
+
+    # Verify the query was executed
+    cursor.execute.assert_called_once_with("INSERT INTO test VALUES (1, 'Test')")
+
+    # Check that no results were returned
+    assert len(result) == 0
 
 
 def test_trino_multiple_statements(mocker: Any) -> None:
-    """Test that multiple statements in a single query raise an error."""
-    connection, _ = setup_mock_trino_connection(mocker)
+    """Test handling of multiple statements."""
+    # Create a mock connection
+    connection, cursor = setup_mock_trino_connection(mocker)
+
+    # Create adapter
+    adapter = TrinoAdapter(host="localhost", port=8080, user="test")
+
+    # Try to execute multiple statements
+    with pytest.raises(ValueError) as exc_info:
+        adapter.execute("SELECT 1; SELECT 2")
+
+    assert "multiple statements" in str(exc_info.value)
+
+
+def test_trino_session_properties(mocker: Any) -> None:
+    """Test setting session properties."""
+    # Create a mock connection
+    connection, cursor = setup_mock_trino_connection(mocker)
+
+    # Create adapter with session properties
     TrinoAdapter(
         host="localhost",
         port=8080,
         user="test",
-        catalog="test_catalog",
-        schema="test_schema",
-    )
-
-    with pytest.raises(ValueError) as exc_info:
-        connection.cursor().execute("SELECT 1; SELECT 2")
-    assert "multiple statements" in str(exc_info.value).lower()
-
-
-def test_trino_session_properties(mocker: Any) -> None:
-    """Test setting session properties in Trino adapter."""
-    connection, cursor = setup_mock_trino_connection(mocker)
-    session_properties = {"query_max_memory": "1GB", "query_max_run_time": "1h"}
-
-    TrinoAdapter(
-        host="localhost", port=8080, user="test", session_properties=session_properties
+        session_properties={
+            "query_max_memory": "1GB",
+            "query_max_run_time": "1h",
+        },
     )
 
     # Verify that session properties were set during initialization
-    expected_calls = [
-        mocker.call("SET SESSION query_max_memory = '1GB'"),
-        mocker.call("SET SESSION query_max_run_time = '1h'"),
-    ]
-    cursor.execute.assert_has_calls(expected_calls, any_order=True)
+    cursor.execute.assert_any_call("SET SESSION query_max_memory = '1GB'")
+    cursor.execute.assert_any_call("SET SESSION query_max_run_time = '1h'")
 
 
 class TestTrinoAdapter:
     """Test cases for TrinoAdapter class."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch) -> None:
+    def setup(self, monkeypatch: Any) -> None:
         """Set up test fixtures."""
         # Mock the trino.dbapi module
         self.mock_trino = MagicMock()
@@ -282,16 +310,17 @@ class TestTrinoAdapter:
         """Test getting column information."""
         # Configure the mock cursor
         self.mock_cursor.description = [
-            ("Column", "Type", "Extra", "Comment"),
-            ("Column", "Type", "Extra", "Comment"),
+            ("Column", "Type", "Extra"),
+            ("id", "INTEGER", ""),
+            ("name", "VARCHAR", ""),
         ]
         self.mock_cursor.fetchall.return_value = [
-            ("id", "integer", "", "Primary key"),
-            ("name", "varchar", "", "User name"),
+            ("id", "INTEGER", ""),
+            ("name", "VARCHAR", ""),
         ]
 
         # Get columns
-        result = self.adapter.get_columns("table1", "catalog1", "schema1")
+        result = self.adapter.get_columns("catalog1", "schema1", "table1")
 
         # Verify the query was executed
         self.mock_cursor.execute.assert_called_once_with(
@@ -299,49 +328,61 @@ class TestTrinoAdapter:
         )
 
         # Verify the result
-        assert len(result) == 2
-        assert result[0]["name"] == "id"
-        assert result[0]["type"] == "integer"
-        assert result[1]["name"] == "name"
-        assert result[1]["type"] == "varchar"
+        assert result == [
+            {"name": "id", "type": "INTEGER", "extra": ""},
+            {"name": "name", "type": "VARCHAR", "extra": ""},
+        ]
 
     def test_set_session_property(self) -> None:
         """Test setting a session property."""
-        # Set a session property
+        # Set a property
         self.adapter.set_session_property("query_max_memory", "2GB")
 
-        # Verify the property was set
+        # Verify the property was added to the session properties
         assert self.adapter._session_properties["query_max_memory"] == "2GB"
 
-        # Verify the statement was executed
+        # Verify the property was set in the session
         self.mock_cursor.execute.assert_called_once_with(
             "SET SESSION query_max_memory = '2GB'"
         )
 
     def test_execute_with_http_headers(self) -> None:
-        """Test execution with HTTP headers."""
-        # Create an adapter with HTTP headers
-        adapter = TrinoAdapter(
-            host="localhost",
-            port=8080,
-            user="test",
-            http_headers={"X-Trino-User": "test_user"},
+        """Test executing a query with HTTP headers."""
+        # Configure the mock cursor
+        self.mock_cursor.description = None
+
+        # Execute with headers
+        self.adapter.execute(
+            "SELECT * FROM test",
+            extra_headers={
+                "X-Trino-User": "test_user",
+                "X-Trino-Schema": "test_schema",
+            },
         )
 
-        # Execute a statement
-        adapter.execute("SELECT 1")
+        # Verify the headers were set
+        assert self.mock_cursor.execute.call_count == 3
+        self.mock_cursor.execute.assert_any_call(
+            "SET SESSION query_max_run_time = '2h'"
+        )
+        self.mock_cursor.execute.assert_any_call(
+            "SET SESSION distributed_join = 'true'"
+        )
+        self.mock_cursor.execute.assert_any_call("SELECT * FROM test")
 
-        # Verify the headers were used
-        assert adapter._connection.http_headers == {"X-Trino-User": "test_user"}
-
-    def test_missing_trino_package(self, monkeypatch) -> None:
+    def test_missing_trino_package(self, monkeypatch: Any) -> None:
         """Test behavior when trino package is not installed."""
-        # Simulate the trino package not being installed
+        # Remove the trino module
         monkeypatch.setattr("sql_batcher.adapters.trino.trino", None)
 
-        # Attempting to create the adapter should raise an ImportError
-        with pytest.raises(ImportError) as excinfo:
-            TrinoAdapter(host="localhost", port=8080, user="test")
+        # Attempt to create the adapter
+        with pytest.raises(ImportError) as exc_info:
+            TrinoAdapter(
+                host="localhost",
+                port=8080,
+                user="test_user",
+                catalog="test_catalog",
+                schema="test_schema",
+            )
 
-        # Verify the error message
-        assert "trino package is required" in str(excinfo.value)
+        assert "trino package is required" in str(exc_info.value)

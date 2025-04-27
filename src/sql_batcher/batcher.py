@@ -183,22 +183,24 @@ class SQLBatcher:
         execute_callback: Callable[[str], Any],
         query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> int:
+    ) -> List[Any]:
         """
-        Flush the current batch.
+        Flush the current batch of statements.
 
         Args:
-            execute_callback: Callback for executing SQL (takes SQL string, returns any)
+            execute_callback: Function to execute SQL statements
             query_collector: Optional query collector for collecting queries
             metadata: Optional metadata to associate with the batch
 
         Returns:
-            Number of statements flushed
+            List of results from executed statements
         """
+        # Get the current batch count
         count = len(self._collector.get_batch())
 
+        # If batch is empty, return empty list
         if count == 0:
-            return 0
+            return []
 
         # Join statements
         batch_sql = "\n".join(self._collector.get_batch())
@@ -206,19 +208,20 @@ class SQLBatcher:
         # If in dry run mode, just collect the queries
         if self._collector.is_dry_run():
             if query_collector:
-                query_collector.collect(batch_sql, metadata)
+                query_collector.collect(batch_sql)
+            return []
         else:
             # Execute the batch
-            execute_callback(batch_sql)
+            results = execute_callback(batch_sql)
 
             # Optionally collect the query
             if query_collector:
-                query_collector.collect(batch_sql, metadata)
+                query_collector.collect(batch_sql)
 
-        # Reset the batch
-        self.reset()
+            # Reset the batch
+            self.reset()
 
-        return count
+            return results if results is not None else []
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:
         """
@@ -273,18 +276,22 @@ class SQLBatcher:
             if self.add_statement(statement):
                 # Batch is full, flush it
                 if query_collector:
-                    query_collector.collect(statement, metadata)
+                    query_collector.collect(statement)
                 else:
                     self._collector.collect(statement)
-                results.extend(self.flush(execute_callback, query_collector, metadata))
+                results.extend(
+                    self.flush(execute_callback, query_collector, metadata) or []
+                )
 
         # Flush any remaining statements
         if self._collector.get_current_size() > 0:
             if query_collector:
-                query_collector.collect(statement, metadata)
+                query_collector.collect(statement)
             else:
                 self._collector.collect(statement)
-            results.extend(self.flush(execute_callback, query_collector, metadata))
+            results.extend(
+                self.flush(execute_callback, query_collector, metadata) or []
+            )
 
         return results
 

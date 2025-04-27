@@ -106,7 +106,9 @@ class TrinoAdapter(SQLAdapter):
         """
         return 1_000_000  # 1MB default limit
 
-    def execute(self, sql: str) -> List[Tuple[Any, ...]]:
+    def execute(
+        self, sql: str, extra_headers: Optional[Dict[str, str]] = None
+    ) -> List[Tuple[Any, ...]]:
         """
         Execute a SQL statement and return results.
 
@@ -116,6 +118,7 @@ class TrinoAdapter(SQLAdapter):
 
         Args:
             sql: SQL statement to execute
+            extra_headers: Optional additional HTTP headers to include with the request
 
         Returns:
             List of result rows as tuples
@@ -132,6 +135,10 @@ class TrinoAdapter(SQLAdapter):
                     "Trino does not support multiple statements in a single query. "
                     "Use SQLBatcher to process statements individually."
                 )
+
+        # Update connection headers if extra headers provided
+        if extra_headers:
+            self._connection.http_headers.update(extra_headers)
 
         # Execute the statement
         self._cursor.execute(sql)

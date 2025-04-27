@@ -53,6 +53,7 @@ class BigQueryAdapter(SQLAdapter):
         default_query_parameters: Optional[Dict[str, Any]] = None,
         timeout_ms: Optional[int] = None,
         client: Optional["bigquery.Client"] = None,
+        labels: Optional[Dict[str, str]] = None,
     ):
         """
         Initialize the BigQuery adapter.
@@ -68,6 +69,7 @@ class BigQueryAdapter(SQLAdapter):
             default_query_parameters: Default query parameters to use
             timeout_ms: Query timeout in milliseconds
             client: Existing BigQuery client (optional)
+            labels: Optional labels to apply to all jobs
 
         Raises:
             ImportError: If the Google Cloud BigQuery library is not installed
@@ -104,6 +106,9 @@ class BigQueryAdapter(SQLAdapter):
 
         if timeout_ms:
             self.job_config.timeout_ms = timeout_ms
+
+        if labels:
+            self.job_config.labels = labels
 
         # Set default dataset reference
         self.job_config.default_dataset = f"{project_id}.{dataset_id}"
