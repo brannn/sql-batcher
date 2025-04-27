@@ -3,6 +3,7 @@ Tests for the InsertMerger class.
 """
 
 import unittest
+import pytest
 
 from sql_batcher.insert_merger import InsertMerger
 
@@ -184,6 +185,98 @@ class TestInsertMerger(unittest.TestCase):
         results = merger.flush_all()
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0], "INSERT INTO test VALUES (3)")
+
+
+def test_insert_merger_initialization():
+    """Test InsertMerger initialization."""
+    merger = InsertMerger()
+    assert merger is not None
+
+
+def test_insert_merger_extract_table_name():
+    """Test extracting table names from INSERT statements."""
+    merger = InsertMerger()
+    assert merger._extract_table_name("INSERT INTO users VALUES (1)") == "users"
+    assert merger._extract_table_name("INSERT INTO products (id) VALUES (1)") == "products"
+    assert merger._extract_table_name("SELECT * FROM users") is None
+
+
+def test_insert_merger_extract_columns():
+    """Test extracting column names from INSERT statements."""
+    merger = InsertMerger()
+    assert merger._extract_columns("INSERT INTO users (id, name) VALUES (1, 'John')") == [
+        "id",
+        "name",
+    ]
+    assert merger._extract_columns("INSERT INTO users VALUES (1, 'John')") is None
+    assert merger._extract_columns("SELECT * FROM users") is None
+
+
+def test_insert_merger_extract_values():
+    """Test extracting values from INSERT statements."""
+    merger = InsertMerger()
+    assert merger._extract_values("INSERT INTO users VALUES (1, 'John')") == ["1", "'John'"]
+    assert merger._extract_values("INSERT INTO users (id, name) VALUES (1, 'John')") == [
+        "1",
+        "'John'",
+    ]
+    assert merger._extract_values("SELECT * FROM users") is None
+
+
+def test_insert_merger_are_compatible():
+    """Test checking if INSERT statements are compatible."""
+    merger = InsertMerger()
+    stmt1 = "INSERT INTO users (id, name) VALUES (1, 'John')"
+    stmt2 = "INSERT INTO users (id, name) VALUES (2, 'Jane')"
+    stmt3 = "INSERT INTO products (id) VALUES (1)"
+    stmt4 = "INSERT INTO users (id, age) VALUES (3, 25)"
+
+    assert merger._are_compatible(stmt1, stmt2) is True
+    assert merger._are_compatible(stmt1, stmt3) is False
+    assert merger._are_compatible(stmt1, stmt4) is False
+
+
+def test_insert_merger_merge_values():
+    """Test merging values from compatible INSERT statements."""
+    merger = InsertMerger()
+    stmt1 = "INSERT INTO users (id, name) VALUES (1, 'John')"
+    stmt2 = "INSERT INTO users (id, name) VALUES (2, 'Jane')"
+
+    merged = merger._merge_values(stmt1, stmt2)
+    assert merged == "INSERT INTO users (id, name) VALUES (1, 'John'), (2, 'Jane')"
+
+
+def test_insert_merger_merge():
+    """Test merging a list of INSERT statements."""
+    merger = InsertMerger()
+    statements = [
+        "INSERT INTO users (id, name) VALUES (1, 'John')",
+        "INSERT INTO users (id, name) VALUES (2, 'Jane')",
+        "INSERT INTO products (id) VALUES (1)",
+        "INSERT INTO users (id, name) VALUES (3, 'Bob')",
+    ]
+
+    merged = merger.merge(statements)
+    assert len(merged) == 2
+    assert "INSERT INTO users (id, name) VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')" in merged
+    assert "INSERT INTO products (id) VALUES (1)" in merged
+
+
+def test_insert_merger_merge_with_non_insert():
+    """Test merging statements with non-INSERT statements."""
+    merger = InsertMerger()
+    statements = [
+        "SELECT * FROM users",
+        "INSERT INTO users (id, name) VALUES (1, 'John')",
+        "UPDATE users SET name = 'Jane' WHERE id = 1",
+        "INSERT INTO users (id, name) VALUES (2, 'Jane')",
+    ]
+
+    merged = merger.merge(statements)
+    assert len(merged) == 3
+    assert "SELECT * FROM users" in merged
+    assert "INSERT INTO users (id, name) VALUES (1, 'John'), (2, 'Jane')" in merged
+    assert "UPDATE users SET name = 'Jane' WHERE id = 1" in merged
 
 
 if __name__ == "__main__":

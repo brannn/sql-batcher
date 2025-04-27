@@ -329,3 +329,135 @@ async def test_hook_context():
     context.statements.append("SELECT 2")
     assert len(context.statements) == 2
     assert "SELECT 2" in context.statements
+
+
+def test_hook_type():
+    """Test HookType enum."""
+    assert HookType.PRE_BATCH.value == "pre_batch"
+    assert HookType.POST_BATCH.value == "post_batch"
+    assert HookType.PRE_EXECUTE.value == "pre_execute"
+    assert HookType.POST_EXECUTE.value == "post_execute"
+    assert HookType.ON_ERROR.value == "on_error"
+
+
+def test_plugin_initialization():
+    """Test Plugin initialization."""
+    plugin = Plugin("test_plugin")
+    assert plugin.name == "test_plugin"
+    assert plugin.get_hooks(HookType.PRE_BATCH) == []
+
+
+def test_plugin_register_hook():
+    """Test registering hooks."""
+    plugin = Plugin("test_plugin")
+
+    def test_hook(statements, metadata, error):
+        pass
+
+    plugin.register_hook(HookType.PRE_BATCH, test_hook)
+    assert len(plugin.get_hooks(HookType.PRE_BATCH)) == 1
+    assert plugin.get_hooks(HookType.PRE_BATCH)[0] == test_hook
+
+
+def test_plugin_clear_hooks():
+    """Test clearing hooks."""
+    plugin = Plugin("test_plugin")
+
+    def test_hook(statements, metadata, error):
+        pass
+
+    plugin.register_hook(HookType.PRE_BATCH, test_hook)
+    plugin.register_hook(HookType.POST_BATCH, test_hook)
+    assert len(plugin.get_hooks(HookType.PRE_BATCH)) == 1
+    assert len(plugin.get_hooks(HookType.POST_BATCH)) == 1
+
+    plugin.clear_hooks(HookType.PRE_BATCH)
+    assert len(plugin.get_hooks(HookType.PRE_BATCH)) == 0
+    assert len(plugin.get_hooks(HookType.POST_BATCH)) == 1
+
+    plugin.clear_hooks()
+    assert len(plugin.get_hooks(HookType.POST_BATCH)) == 0
+
+
+def test_plugin_manager_initialization():
+    """Test PluginManager initialization."""
+    manager = PluginManager()
+    assert manager.get_plugins() == []
+
+
+def test_plugin_manager_register_plugin():
+    """Test registering plugins."""
+    manager = PluginManager()
+    plugin = Plugin("test_plugin")
+    manager.register_plugin(plugin)
+    assert len(manager.get_plugins()) == 1
+    assert manager.get_plugins()[0] == plugin
+
+
+def test_plugin_manager_unregister_plugin():
+    """Test unregistering plugins."""
+    manager = PluginManager()
+    plugin = Plugin("test_plugin")
+    manager.register_plugin(plugin)
+    assert len(manager.get_plugins()) == 1
+
+    manager.unregister_plugin("test_plugin")
+    assert len(manager.get_plugins()) == 0
+
+
+@pytest.mark.asyncio
+async def test_plugin_manager_execute_hooks():
+    """Test executing hooks."""
+    manager = PluginManager()
+    plugin = Plugin("test_plugin")
+
+    # Track hook execution
+    pre_batch_called = False
+    post_batch_called = False
+
+    def pre_batch_hook(statements, metadata, error):
+        nonlocal pre_batch_called
+        pre_batch_called = True
+
+    async def post_batch_hook(statements, metadata, error):
+        nonlocal post_batch_called
+        post_batch_called = True
+
+    # Register hooks
+    plugin.register_hook(HookType.PRE_BATCH, pre_batch_hook)
+    plugin.register_hook(HookType.POST_BATCH, post_batch_hook)
+    manager.register_plugin(plugin)
+
+    # Execute hooks
+    await manager.execute_hooks(HookType.PRE_BATCH, ["SELECT 1"])
+    await manager.execute_hooks(HookType.POST_BATCH, ["SELECT 1"])
+
+    assert pre_batch_called
+    assert post_batch_called
+
+
+@pytest.mark.asyncio
+async def test_plugin_manager_execute_hooks_with_error():
+    """Test executing hooks with error handling."""
+    manager = PluginManager()
+    plugin = Plugin("test_plugin")
+
+    # Track hook execution
+    error_hook_called = False
+    error_received = None
+
+    def error_hook(statements, metadata, error):
+        nonlocal error_hook_called, error_received
+        error_hook_called = True
+        error_received = error
+
+    # Register hook
+    plugin.register_hook(HookType.ON_ERROR, error_hook)
+    manager.register_plugin(plugin)
+
+    # Execute hook with error
+    test_error = Exception("Test error")
+    await manager.execute_hooks(HookType.ON_ERROR, ["SELECT 1"], error=test_error)
+
+    assert error_hook_called
+    assert error_received == test_error
