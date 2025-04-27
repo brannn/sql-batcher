@@ -258,4 +258,5 @@ def mock_db_connection() -> MagicMock:
     mock_connection.cursor.return_value = mock_cursor
     mock_cursor.description = [("id",), ("name",)]
     mock_cursor.fetchall.return_value = [(1, "Test")]
+    mock_cursor.execute.return_value = None
     return mock_connection

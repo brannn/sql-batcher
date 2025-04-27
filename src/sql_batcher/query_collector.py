@@ -188,3 +188,21 @@ class QueryCollector:
             bool: True if dry run mode is enabled.
         """
         return self.dry_run
+
+
+class ListQueryCollector(QueryCollector):
+    """
+    A specialized QueryCollector that maintains a list of queries.
+
+    This class extends QueryCollector to provide additional functionality
+    for managing a list of queries with metadata.
+    """
+
+    def get_queries(self) -> List[Dict[str, Any]]:
+        """
+        Get all collected queries with their metadata.
+
+        Returns:
+            List[Dict[str, Any]]: List of queries with metadata.
+        """
+        return self.queries
