@@ -255,7 +255,7 @@ class TestTrinoAdapter:
     def test_execute_with_http_headers(self):
         """Test execution with HTTP headers."""
         # Create an adapter with HTTP headers
-        adapter_with_headers = TrinoAdapter(
+        assert adapter_with_headers = TrinoAdapter(
             host="localhost",
             port=8080,
             user="test_user",
