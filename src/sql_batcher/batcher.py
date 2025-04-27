@@ -229,7 +229,7 @@ class SQLBatcher:
         # If in dry run mode, just collect the queries
         if self._collector.is_dry_run():
             if query_collector:
-                query_collector.collect(batch_sql)
+                query_collector.collect(batch_sql, metadata=metadata)
             return 0
         else:
             # Execute the batch
@@ -237,7 +237,7 @@ class SQLBatcher:
 
             # Optionally collect the query
             if query_collector:
-                query_collector.collect(batch_sql)
+                query_collector.collect(batch_sql, metadata=metadata)
 
             # Reset the batch
             self.reset()
@@ -302,22 +302,18 @@ class SQLBatcher:
             if self.add_statement(statement):
                 # Batch is full, flush it
                 if query_collector:
-                    query_collector.collect(statement)
+                    query_collector.collect(statement, metadata=metadata)
                 else:
-                    self._collector.collect(statement)
-                results.append(
-                    self.flush(execute_callback, query_collector, metadata)
-                )
+                    self._collector.collect(statement, metadata=metadata)
+                results.append(self.flush(execute_callback, query_collector, metadata))
 
         # Flush any remaining statements
         if self._collector.get_current_size() > 0:
             if query_collector:
-                query_collector.collect(statement)
+                query_collector.collect(statement, metadata=metadata)
             else:
-                self._collector.collect(statement)
-            results.append(
-                self.flush(execute_callback, query_collector, metadata)
-            )
+                self._collector.collect(statement, metadata=metadata)
+            results.append(self.flush(execute_callback, query_collector, metadata))
 
         # Return the total count
         return len(statements)
