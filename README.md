@@ -10,7 +10,7 @@ A Python library for managing large volumes of SQL statements by batching them a
 
 | Database | Query Size Limit | Dedicated Adapter | Notes |
 |----------|-----------------|-------------------|-------|
-| PostgreSQL | 1GB | ✅ | Default limit can be increased |
+| PostgreSQL | 4MB | ✅ | Configurable via `max_stack_depth` |
 | Snowflake | 100MB | ✅ | Varies by warehouse size |
 | Trino | 1GB | ✅ | Configurable via `query.max-size` |
 | BigQuery | 1MB (interactive)<br>20MB (batch) | ✅ | Different limits for interactive/batch |
