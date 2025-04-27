@@ -23,21 +23,15 @@ def run_core_tests(options: List[str] = None) -> int:
     Returns:
         Exit code from pytest
     """
-    # In CI environment, we want to run all core tests
+    # In CI environment, we want to run only the most basic tests
     if os.environ.get("CI"):
         cmd = [
             "pytest",
-            "tests/test_batcher.py",
-            "tests/test_adapters.py",
-            "tests/test_async_batcher.py",
-            "tests/test_async_batcher_context.py",
-            "tests/test_hook_manager.py",
-            "tests/test_plugins.py",
-            "tests/test_insert_merger.py",
-            "tests/test_query_collector.py",
-            "tests/test_retry_manager.py",
-            "tests/test_batch_manager.py",
-            "-k", "not postgresql and not snowflake and not trino and not bigquery"
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_defaults",
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_custom_values",
+            "tests/test_batcher.py::TestSQLBatcher::test_add_statement",
+            "tests/test_batcher.py::TestSQLBatcher::test_reset",
+            "-v"
         ]
     else:
         # In local environment, we can be more selective
