@@ -199,7 +199,7 @@ async def test_async_batcher_context_manager_error_handling():
     """Test error handling in async batcher context manager."""
     adapter = MagicMock()
     adapter.connect.side_effect = AdapterConnectionError("test")
-    
+
     with pytest.raises(AdapterConnectionError):
         async with AsyncSQLBatcher(adapter) as _:  # Use _ instead of b
             pass
