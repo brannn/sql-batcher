@@ -299,15 +299,13 @@ class TestGenericAdapter:
 
 @pytest.mark.core
 class TestAsyncSQLAdapter:
-    """Test cases for abstract AsyncSQLAdapter class."""
+    """Test cases for AsyncSQLAdapter abstract base class."""
 
-    def test_abstract_methods(self) -> None:
-        """Test that AsyncSQLAdapter requires implementing abstract methods."""
-        # Should not be able to instantiate the abstract class
+    def test_abstract_methods_require_implementation(self) -> None:
+        """Test that AsyncSQLAdapter enforces implementation of abstract methods."""
         with pytest.raises(TypeError):
             AsyncSQLAdapter()  # type: ignore
 
-        # Create a minimal implementation
         class MinimalAsyncAdapter(AsyncSQLAdapter):
             async def execute(self, sql: str) -> List[Any]:
                 return []
@@ -318,37 +316,38 @@ class TestAsyncSQLAdapter:
             async def close(self) -> None:
                 pass
 
-        # Should be able to instantiate the minimal implementation
         adapter = MinimalAsyncAdapter()
-        assert adapter is not None
+        assert isinstance(adapter, AsyncSQLAdapter)
+
+
+@pytest.fixture
+async def async_adapter() -> TestAsyncAdapterImpl:
+    """Fixture providing a configured asynchronous test adapter."""
+    adapter = TestAsyncAdapterImpl()
+    yield adapter
+    await adapter.close()
 
 
 @pytest.mark.asyncio
-class TestAsyncAdapterImpl:
-    """Test cases for TestAsyncAdapterImpl."""
+async def test_async_adapter_execute(async_adapter: TestAsyncAdapterImpl) -> None:
+    """Test execute method."""
+    await async_adapter.execute("SELECT 1")
+    assert async_adapter.get_executed_statements() == ["SELECT 1"]
 
-    @pytest.fixture(autouse=True)
-    async def setup_adapter(self) -> None:
-        """Set up test fixtures."""
-        self.adapter = TestAsyncAdapterImpl()
-        yield
-        await self.adapter.close()
 
-    async def test_execute(self) -> None:
-        """Test execute method."""
-        await self.adapter.execute("SELECT 1")
-        assert self.adapter.get_executed_statements() == ["SELECT 1"]
+@pytest.mark.asyncio
+async def test_async_adapter_max_query_size(async_adapter: TestAsyncAdapterImpl) -> None:
+    """Test max query size."""
+    assert await async_adapter.get_max_query_size() == 500_000
 
-    async def test_max_query_size(self) -> None:
-        """Test max query size."""
-        assert await self.adapter.get_max_query_size() == 500_000
 
-    async def test_transaction(self) -> None:
-        """Test transaction methods."""
-        await self.adapter.begin_transaction()
-        await self.adapter.execute("INSERT INTO test VALUES (1)")
-        await self.adapter.commit_transaction()
+@pytest.mark.asyncio
+async def test_async_adapter_transaction(async_adapter: TestAsyncAdapterImpl) -> None:
+    """Test transaction methods."""
+    await async_adapter.begin_transaction()
+    await async_adapter.execute("INSERT INTO test VALUES (1)")
+    await async_adapter.commit_transaction()
 
-        assert self.adapter.connection.begin.call_count == 1
-        assert self.adapter.cursor.execute.call_count == 1
-        assert self.adapter.connection.commit.call_count == 1
+    assert async_adapter.connection.begin.call_count == 1
+    assert async_adapter.cursor.execute.call_count == 1
+    assert async_adapter.connection.commit.call_count == 1
