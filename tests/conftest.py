@@ -285,6 +285,6 @@ def mock_db_connection() -> MagicMock:
     mock_cursor.execute.side_effect = execute_side_effect
 
     # Ensure cursor() returns the same mock cursor instance
-    mock_connection.cursor = MagicMock(return_value=mock_cursor)
+    setattr(mock_connection, "cursor", MagicMock(return_value=mock_cursor))
 
     return mock_connection
