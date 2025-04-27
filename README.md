@@ -35,8 +35,52 @@ SQL Batcher includes dedicated adapters for popular database systems, providing 
 ### Transaction Management
 The library provides comprehensive transaction management, including automatic transaction handling, configurable commit strategies, and error recovery with rollback support. It supports nested transactions and ensures data consistency across batch operations. This makes it suitable for complex operations that require atomicity.
 
-### Query Tracking
-SQL Batcher includes built-in query tracking capabilities that allow you to monitor executed queries, track batch sizes and execution times, and generate execution reports. This feature is invaluable for debugging and optimizing performance, as it provides detailed insights into how your queries are being processed and where potential bottlenecks might exist.
+### Query Collector
+The Query Collector is a powerful tool for monitoring and analyzing SQL operations. It tracks detailed information about each executed query, including:
+
+- Query text and parameters
+- Execution time and batch size
+- Success/failure status
+- Transaction boundaries
+- Memory usage
+
+The collector provides both real-time monitoring and post-execution analysis capabilities. You can use it to:
+- Monitor query execution in real-time
+- Generate performance reports
+- Debug issues with specific queries
+- Optimize batch sizes and transaction boundaries
+- Track memory usage and identify potential bottlenecks
+
+Example usage:
+```python
+from sql_batcher.query_collector import QueryCollector
+
+# Create a collector
+collector = QueryCollector()
+
+# Process statements with tracking
+batcher.process_statements(statements, adapter.execute, collector)
+
+# Get detailed statistics
+stats = collector.get_stats()
+print(f"Total queries: {stats['count']}")
+print(f"Average batch size: {stats['avg_batch_size']}")
+print(f"Total execution time: {stats['total_time']}")
+print(f"Memory usage: {stats['memory_usage']}")
+
+# Get individual query details
+for query in collector.get_queries():
+    print(f"Query: {query.sql}")
+    print(f"Execution time: {query.execution_time}")
+    print(f"Batch size: {query.batch_size}")
+```
+
+The Query Collector is particularly useful when:
+- Debugging performance issues
+- Optimizing batch sizes
+- Monitoring long-running operations
+- Generating execution reports
+- Identifying problematic queries
 
 ## Installation
 
