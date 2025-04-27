@@ -8,9 +8,9 @@ batching SQL statements based on size limits.
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
+from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.insert_merger import InsertMerger
 from sql_batcher.query_collector import QueryCollector
-from sql_batcher.adapters.base import SQLAdapter
 
 
 class SQLBatcher:
@@ -41,7 +41,7 @@ class SQLBatcher:
         adapter: SQLAdapter,
         max_bytes: Optional[int] = None,
         batch_mode: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Initialize the SQL batcher."""
         self._adapter = adapter
@@ -111,13 +111,17 @@ class SQLBatcher:
                 # Calculate adjustment factor
                 # More columns -> smaller batches (lower adjusted max_bytes)
                 # Fewer columns -> larger batches (higher adjusted max_bytes)
-                raw_factor = self._collector.get_reference_column_count() / max(1, self._collector.get_column_count())
+                raw_factor = self._collector.get_reference_column_count() / max(
+                    1, self._collector.get_column_count()
+                )
 
                 # Clamp to min/max bounds
-                self._collector.set_adjustment_factor(max(
-                    self._collector.get_min_adjustment_factor(),
-                    min(self._collector.get_max_adjustment_factor(), raw_factor),
-                ))
+                self._collector.set_adjustment_factor(
+                    max(
+                        self._collector.get_min_adjustment_factor(),
+                        min(self._collector.get_max_adjustment_factor(), raw_factor),
+                    )
+                )
 
                 # Logging for debugging
                 import logging
@@ -346,25 +350,25 @@ class SQLBatcher:
         """
         if not self._batch_mode:
             return self.process_statements(statements, execute_func)
-            
+
         # Collect all statements
         for statement in statements:
             self._collector.collect(statement)
-            
+
         # Get the batch
         batch = self._collector.get_batch()
         if not batch:
             return []
-            
+
         # Execute the batch
         if execute_func:
             result = execute_func(batch)
         else:
             result = self._adapter.execute(batch)
-            
+
         # Reset the collector
         self._collector.reset()
-        
+
         return [result]
 
     def process_stream(
@@ -384,7 +388,7 @@ class SQLBatcher:
         for statement in statements:
             # Collect the statement
             self._collector.collect(statement)
-            
+
             # Execute if batch is full
             if self._collector.get_current_size() >= self.get_adjusted_max_bytes():
                 # Get the batch
@@ -396,10 +400,10 @@ class SQLBatcher:
                     else:
                         result = self._adapter.execute(batch)
                     results.append(result)
-                    
+
                 # Reset the collector
                 self._collector.reset()
-                
+
         # Process any remaining statements
         if self._collector.get_current_size() > 0:
             # Get the batch
@@ -411,10 +415,10 @@ class SQLBatcher:
                 else:
                     result = self._adapter.execute(batch)
                 results.append(result)
-                
+
             # Reset the collector
             self._collector.reset()
-            
+
         return results
 
     def process_chunk(
@@ -432,23 +436,23 @@ class SQLBatcher:
         """
         if not self._batch_mode:
             return self.process_statements(statements, execute_func)
-            
+
         # Collect all statements
         for statement in statements:
             self._collector.collect(statement)
-            
+
         # Get the batch
         batch = self._collector.get_batch()
         if not batch:
             return []
-            
+
         # Execute the batch
         if execute_func:
             result = execute_func(batch)
         else:
             result = self._adapter.execute(batch)
-            
+
         # Reset the collector
         self._collector.reset()
-        
+
         return [result]

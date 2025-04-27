@@ -2,8 +2,9 @@
 Tests for SQL adapter base classes.
 """
 
-import pytest
 from typing import Any, Dict, Generator, List, Optional, Tuple, cast
+
+import pytest
 
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
@@ -11,7 +12,7 @@ from sql_batcher.adapters.generic import GenericAdapter
 
 class TestAdapter(SQLAdapter):
     """Test adapter implementation."""
-    
+
     def __init__(self) -> None:
         self._max_query_size = 1000
         self._results: List[Any] = []
@@ -50,7 +51,7 @@ def test_adapter_max_query_size() -> None:
 def test_adapter_transaction() -> None:
     """Test transaction management."""
     adapter = TestAdapter()
-    
+
     # Default implementations should not raise errors
     adapter.begin_transaction()
     adapter.commit_transaction()

@@ -46,7 +46,7 @@ class PostgreSQLAdapter(SQLAdapter):
         cursor_factory: Optional[Any] = None,
         application_name: Optional[str] = None,
         max_query_size: Optional[int] = None,
-        fetch_results: bool = True
+        fetch_results: bool = True,
     ) -> None:
         """Initialize the PostgreSQL adapter."""
         if not PSYCOPG2_AVAILABLE:
@@ -283,21 +283,21 @@ class PostgreSQLAdapter(SQLAdapter):
             columns = index.get("columns", [])
             if isinstance(columns, str):
                 columns = [columns]
-            
+
             index_type = index.get("type", "btree")
             unique = index.get("unique", False)
-            
+
             if not name or not columns:
                 continue
-                
+
             unique_str = "UNIQUE " if unique else ""
             columns_str = ", ".join(cast(List[str], columns))
-            
+
             sql = (
                 f"CREATE {unique_str}INDEX {name} "
                 f"ON {table_name} USING {index_type} ({columns_str})"
             )
             statements.append(sql)
             self.execute(sql)
-            
+
         return statements

@@ -55,12 +55,13 @@ def has_postgres_connection() -> bool:
     """Check if PostgreSQL connection is available."""
     try:
         import psycopg2
+
         conn = psycopg2.connect(
             host=os.getenv("POSTGRES_HOST", "localhost"),
             port=int(os.getenv("POSTGRES_PORT", "5432")),
             user=os.getenv("POSTGRES_USER", "postgres"),
             password=os.getenv("POSTGRES_PASSWORD", "postgres"),
-            database=os.getenv("POSTGRES_DB", "postgres")
+            database=os.getenv("POSTGRES_DB", "postgres"),
         )
         conn.close()
         return True
@@ -73,13 +74,14 @@ def has_snowflake_connection() -> bool:
     """Check if Snowflake connection is available."""
     try:
         import snowflake.connector
+
         conn = snowflake.connector.connect(
             account=os.getenv("SNOWFLAKE_ACCOUNT"),
             user=os.getenv("SNOWFLAKE_USER"),
             password=os.getenv("SNOWFLAKE_PASSWORD"),
             warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
             database=os.getenv("SNOWFLAKE_DATABASE"),
-            schema=os.getenv("SNOWFLAKE_SCHEMA")
+            schema=os.getenv("SNOWFLAKE_SCHEMA"),
         )
         conn.close()
         return True
@@ -92,12 +94,13 @@ def has_trino_connection() -> bool:
     """Check if Trino connection is available."""
     try:
         import trino
+
         conn = trino.dbapi.connect(
             host=os.getenv("TRINO_HOST", "localhost"),
             port=int(os.getenv("TRINO_PORT", "8080")),
             user=os.getenv("TRINO_USER", "trino"),
             catalog=os.getenv("TRINO_CATALOG"),
-            schema=os.getenv("TRINO_SCHEMA")
+            schema=os.getenv("TRINO_SCHEMA"),
         )
         conn.close()
         return True
@@ -110,6 +113,7 @@ def has_bigquery_connection() -> bool:
     """Check if BigQuery connection is available."""
     try:
         from google.cloud import bigquery
+
         client = bigquery.Client()
         client.close()
         return True
@@ -122,6 +126,7 @@ def has_spark_connection() -> bool:
     """Check if Spark connection is available."""
     try:
         from pyspark.sql import SparkSession
+
         spark = SparkSession.builder.getOrCreate()
         spark.stop()
         return True
@@ -137,7 +142,7 @@ def postgres_connection_params() -> Dict[str, Any]:
         "port": int(os.getenv("POSTGRES_PORT", "5432")),
         "user": os.getenv("POSTGRES_USER", "postgres"),
         "password": os.getenv("POSTGRES_PASSWORD", "postgres"),
-        "database": os.getenv("POSTGRES_DB", "postgres")
+        "database": os.getenv("POSTGRES_DB", "postgres"),
     }
 
 
@@ -150,7 +155,7 @@ def snowflake_connection_params() -> Dict[str, str]:
         "password": os.getenv("SNOWFLAKE_PASSWORD", ""),
         "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", ""),
         "database": os.getenv("SNOWFLAKE_DATABASE", ""),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA", "")
+        "schema": os.getenv("SNOWFLAKE_SCHEMA", ""),
     }
 
 
@@ -162,7 +167,7 @@ def trino_connection_params() -> Dict[str, Any]:
         "port": int(os.getenv("TRINO_PORT", "8080")),
         "user": os.getenv("TRINO_USER", "trino"),
         "catalog": os.getenv("TRINO_CATALOG", ""),
-        "schema": os.getenv("TRINO_SCHEMA", "")
+        "schema": os.getenv("TRINO_SCHEMA", ""),
     }
 
 
@@ -172,7 +177,7 @@ def bigquery_connection_params() -> Dict[str, str]:
     return {
         "project_id": os.getenv("BIGQUERY_PROJECT_ID", ""),
         "dataset_id": os.getenv("BIGQUERY_DATASET_ID", ""),
-        "location": os.getenv("BIGQUERY_LOCATION", "US")
+        "location": os.getenv("BIGQUERY_LOCATION", "US"),
     }
 
 
@@ -181,7 +186,7 @@ def spark_connection_params() -> Dict[str, str]:
     """Get Spark connection parameters."""
     return {
         "master": os.getenv("SPARK_MASTER", "local[*]"),
-        "app_name": os.getenv("SPARK_APP_NAME", "sql_batcher_test")
+        "app_name": os.getenv("SPARK_APP_NAME", "sql_batcher_test"),
     }
 
 

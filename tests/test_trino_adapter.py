@@ -1,7 +1,7 @@
+from typing import Any, Dict, List, Optional, Tuple, cast
 from unittest.mock import MagicMock
 
 import pytest
-from typing import Any, Dict, List, Optional, Tuple, cast
 
 # Mark all tests in this file as using trino-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.trino]
@@ -27,7 +27,7 @@ def mock_trino(mocker: Any) -> Tuple[TrinoAdapter, Any, Any]:
         port=8080,
         user="test",
         catalog="test_catalog",
-        schema="test_schema"
+        schema="test_schema",
     )
     return adapter, connection, cursor
 
@@ -37,7 +37,7 @@ def test_trino_execute(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> None:
     adapter, _, cursor = mock_trino
     cursor.description = [("column1",)]
     cursor.fetchall.return_value = [(1,), (2,), (3,)]
-    
+
     result = adapter.execute("SELECT * FROM test_table")
     assert result == [(1,), (2,), (3,)]
     cursor.execute.assert_called_once_with("SELECT * FROM test_table")
@@ -47,7 +47,7 @@ def test_trino_execute_no_results(mock_trino: Tuple[TrinoAdapter, Any, Any]) -> 
     """Test executing a non-SELECT query with Trino adapter."""
     adapter, _, cursor = mock_trino
     cursor.description = None
-    
+
     result = adapter.execute("CREATE TABLE test_table (id INT)")
     assert result == []
     cursor.execute.assert_called_once_with("CREATE TABLE test_table (id INT)")
@@ -64,22 +64,16 @@ def test_trino_multiple_statements(mock_trino: Tuple[TrinoAdapter, Any, Any]) ->
 def test_trino_session_properties(mocker: Any) -> None:
     """Test setting session properties in Trino adapter."""
     connection, cursor = setup_mock_trino_connection(mocker)
-    session_properties = {
-        "query_max_memory": "1GB",
-        "query_max_run_time": "1h"
-    }
-    
+    session_properties = {"query_max_memory": "1GB", "query_max_run_time": "1h"}
+
     adapter = TrinoAdapter(
-        host="localhost",
-        port=8080,
-        user="test",
-        session_properties=session_properties
+        host="localhost", port=8080, user="test", session_properties=session_properties
     )
-    
+
     # Verify that session properties were set during initialization
     expected_calls = [
         mocker.call("SET SESSION query_max_memory = '1GB'"),
-        mocker.call("SET SESSION query_max_run_time = '1h'")
+        mocker.call("SET SESSION query_max_run_time = '1h'"),
     ]
     cursor.execute.assert_has_calls(expected_calls, any_order=True)
 

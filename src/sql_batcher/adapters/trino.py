@@ -54,7 +54,7 @@ class TrinoAdapter(SQLAdapter):
         session_properties: Optional[Dict[str, str]] = None,
         http_headers: Optional[Dict[str, str]] = None,
         isolation_level: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Initialize the Trino adapter."""
         if not TRINO_AVAILABLE:
@@ -231,10 +231,5 @@ class TrinoAdapter(SQLAdapter):
         Returns:
             List of column information dictionaries
         """
-        result = self.execute(
-            f"DESCRIBE {catalog}.{schema}.{table}"
-        )
-        return [
-            {"name": row[0], "type": row[1], "comment": row[2]}
-            for row in result
-        ]
+        result = self.execute(f"DESCRIBE {catalog}.{schema}.{table}")
+        return [{"name": row[0], "type": row[1], "comment": row[2]} for row in result]

@@ -11,6 +11,7 @@ from sql_batcher.adapters.base import SQLAdapter
 
 try:
     import snowflake.connector
+
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
     SNOWFLAKE_AVAILABLE = False
@@ -40,7 +41,7 @@ class SnowflakeAdapter(SQLAdapter):
         warehouse: Optional[str] = None,
         role: Optional[str] = None,
         session_parameters: Optional[Dict[str, Any]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Initialize the Snowflake adapter."""
         if not SNOWFLAKE_AVAILABLE:
@@ -92,16 +93,16 @@ class SnowflakeAdapter(SQLAdapter):
         """
         if self._connection is None:
             raise ValueError("No connection available")
-            
+
         cursor = self._connection.cursor()
         if cursor is None:
             return []
-            
+
         cursor.execute(sql)
-        
+
         if cursor.description is None:
             return []
-            
+
         result = cursor.fetchall()
         return list(result) if result is not None else []
 
@@ -229,10 +230,5 @@ class SnowflakeAdapter(SQLAdapter):
         Returns:
             List of column information dictionaries
         """
-        result = self.execute(
-            f"DESCRIBE TABLE {database}.{schema}.{table}"
-        )
-        return [
-            {"name": row[0], "type": row[1], "comment": row[2]}
-            for row in result
-        ]
+        result = self.execute(f"DESCRIBE TABLE {database}.{schema}.{table}")
+        return [{"name": row[0], "type": row[1], "comment": row[2]} for row in result]

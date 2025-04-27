@@ -7,7 +7,8 @@ This module provides abstract base classes for database adapters used by SQL Bat
 from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional, Sequence, TypeVar, Union, cast
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class SQLAdapter(ABC):
     """
