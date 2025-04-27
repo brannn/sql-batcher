@@ -1,7 +1,74 @@
+"""
+Tests for SQL adapter base classes.
+"""
+
 import pytest
+from typing import Any, Dict, Generator, List, Optional, Tuple, cast
 
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
+
+
+class TestAdapter(SQLAdapter):
+    """Test adapter implementation."""
+    
+    def __init__(self) -> None:
+        self._max_query_size = 1000
+        self._results: List[Any] = []
+
+    def execute(self, sql: str) -> List[Any]:
+        """Execute a SQL statement."""
+        self._results.append(sql)
+        return []
+
+    def get_max_query_size(self) -> int:
+        """Get maximum query size."""
+        return self._max_query_size
+
+    def close(self) -> None:
+        """Close the connection."""
+        pass
+
+    def get_results(self) -> List[str]:
+        """Get executed statements."""
+        return self._results
+
+
+def test_adapter_execute() -> None:
+    """Test basic execution functionality."""
+    adapter = TestAdapter()
+    adapter.execute("SELECT 1")
+    assert adapter.get_results() == ["SELECT 1"]
+
+
+def test_adapter_max_query_size() -> None:
+    """Test max query size functionality."""
+    adapter = TestAdapter()
+    assert adapter.get_max_query_size() == 1000
+
+
+def test_adapter_transaction() -> None:
+    """Test transaction management."""
+    adapter = TestAdapter()
+    
+    # Default implementations should not raise errors
+    adapter.begin_transaction()
+    adapter.commit_transaction()
+    adapter.rollback_transaction()
+
+
+@pytest.fixture
+def adapter() -> Generator[TestAdapter, None, None]:
+    """Fixture providing a test adapter instance."""
+    adapter = TestAdapter()
+    yield adapter
+    adapter.close()
+
+
+def test_adapter_with_fixture(adapter: TestAdapter) -> None:
+    """Test adapter using fixture."""
+    adapter.execute("SELECT 1")
+    assert adapter.get_results() == ["SELECT 1"]
 
 
 @pytest.mark.core

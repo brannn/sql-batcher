@@ -5,7 +5,7 @@ This module provides a Trino-specific adapter for SQL Batcher, optimized for
 Trino's query limitations and capabilities.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from sql_batcher.adapters.base import SQLAdapter
 
@@ -54,8 +54,8 @@ class TrinoAdapter(SQLAdapter):
         session_properties: Optional[Dict[str, str]] = None,
         http_headers: Optional[Dict[str, str]] = None,
         isolation_level: Optional[str] = None,
-        **kwargs,
-    ):
+        **kwargs: Any
+    ) -> None:
         """Initialize the Trino adapter."""
         if not TRINO_AVAILABLE:
             raise ImportError(
@@ -106,7 +106,7 @@ class TrinoAdapter(SQLAdapter):
         """
         return 1_000_000  # 1MB default limit
 
-    def execute(self, sql: str) -> List[Tuple]:
+    def execute(self, sql: str) -> List[Tuple[Any, ...]]:
         """
         Execute a SQL statement and return results.
 
@@ -138,7 +138,8 @@ class TrinoAdapter(SQLAdapter):
 
         # For SELECT statements, return the results
         if self._cursor.description is not None:
-            return self._cursor.fetchall()
+            result = self._cursor.fetchall()
+            return list(result) if result is not None else []
 
         # For other statements (INSERT, CREATE, etc.), return empty list
         return []
@@ -220,7 +221,7 @@ class TrinoAdapter(SQLAdapter):
         self, table: str, catalog: str, schema: str
     ) -> List[Dict[str, str]]:
         """
-        Get columns for a table.
+        Get column information for a table.
 
         Args:
             table: Table name
@@ -231,7 +232,9 @@ class TrinoAdapter(SQLAdapter):
             List of column information dictionaries
         """
         result = self.execute(
-            f"SELECT column_name, data_type FROM {catalog}.information_schema.columns "
-            f"WHERE table_schema = '{schema}' AND table_name = '{table}'"
+            f"DESCRIBE {catalog}.{schema}.{table}"
         )
-        return [{"name": row[0], "type": row[1]} for row in result]
+        return [
+            {"name": row[0], "type": row[1], "comment": row[2]}
+            for row in result
+        ]

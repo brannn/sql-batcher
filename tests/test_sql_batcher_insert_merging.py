@@ -3,9 +3,21 @@ Tests for the SQLBatcher class with insert merging feature.
 """
 
 import unittest
-from typing import List
+from typing import List, Optional, Any
 
 from sql_batcher import SQLBatcher
+from sql_batcher.adapters.base import SQLAdapter
+
+
+class MockAdapter(SQLAdapter):
+    def execute(self, sql: str) -> List[Any]:
+        return []
+
+    def get_max_query_size(self) -> int:
+        return 1000
+
+    def close(self) -> None:
+        pass
 
 
 class TestSQLBatcherInsertMerging(unittest.TestCase):

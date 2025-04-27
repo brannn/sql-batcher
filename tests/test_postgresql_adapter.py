@@ -1,4 +1,5 @@
 import pytest
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 pytest.importorskip("psycopg2")
 from unittest.mock import Mock
@@ -7,6 +8,124 @@ from unittest.mock import Mock
 pytestmark = [pytest.mark.db, pytest.mark.postgres]
 
 from sql_batcher.adapters.postgresql import PostgreSQLAdapter
+
+
+def setup_mock_pg_connection(mocker: Any) -> Tuple[Any, Any]:
+    """Set up mock PostgreSQL connection and cursor."""
+    mock_cursor = mocker.Mock()
+    mock_connection = mocker.Mock()
+    mock_connection.cursor.return_value = mock_cursor
+    mocker.patch("psycopg2.connect", return_value=mock_connection)
+    return mock_connection, mock_cursor
+
+
+@pytest.fixture
+def mock_pg(mocker: Any) -> Tuple[PostgreSQLAdapter, Any, Any]:
+    """Create a mock PostgreSQL adapter with mocked connection and cursor."""
+    connection, cursor = setup_mock_pg_connection(mocker)
+    adapter = PostgreSQLAdapter(
+        connection_params={
+            "host": "localhost",
+            "port": 5432,
+            "user": "test",
+            "password": "test",
+            "database": "test"
+        }
+    )
+    return adapter, connection, cursor
+
+
+def test_pg_execute(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
+    """Test executing a query with PostgreSQL adapter."""
+    adapter, _, cursor = mock_pg
+    cursor.description = [("column1",)]
+    cursor.fetchall.return_value = [(1,), (2,), (3,)]
+    
+    result = adapter.execute("SELECT * FROM test_table")
+    assert result == [(1,), (2,), (3,)]
+    cursor.execute.assert_called_once_with("SELECT * FROM test_table")
+
+
+def test_pg_execute_no_results(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
+    """Test executing a non-SELECT query with PostgreSQL adapter."""
+    adapter, _, cursor = mock_pg
+    cursor.description = None
+    
+    result = adapter.execute("CREATE TABLE test_table (id INT)")
+    assert result == []
+    cursor.execute.assert_called_once_with("CREATE TABLE test_table (id INT)")
+
+
+def test_pg_transaction(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
+    """Test transaction management with PostgreSQL adapter."""
+    adapter, connection, _ = mock_pg
+    
+    adapter.begin_transaction()
+    connection.autocommit = False
+    
+    adapter.commit_transaction()
+    connection.commit.assert_called_once()
+    
+    adapter.rollback_transaction()
+    connection.rollback.assert_called_once()
+
+
+def test_pg_create_indices(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
+    """Test creating indices with PostgreSQL adapter."""
+    adapter, _, cursor = mock_pg
+    
+    indices = [
+        {
+            "name": "idx_test_id",
+            "columns": ["id"],
+            "type": "btree",
+            "unique": True
+        },
+        {
+            "name": "idx_test_name",
+            "columns": ["name"],
+            "type": "hash"
+        }
+    ]
+    
+    statements = adapter.create_indices("test_table", indices)
+    
+    assert len(statements) == 2
+    assert "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)" in statements
+    assert "CREATE INDEX idx_test_name ON test_table USING hash (name)" in statements
+
+
+def test_pg_isolation_level(mocker: Any) -> None:
+    """Test setting isolation level in PostgreSQL adapter."""
+    import psycopg2.extensions
+    
+    connection, _ = setup_mock_pg_connection(mocker)
+    
+    adapter = PostgreSQLAdapter(
+        connection_params={
+            "host": "localhost",
+            "database": "test"
+        },
+        isolation_level="serializable"
+    )
+    
+    assert connection.isolation_level == psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+
+
+def test_pg_cursor_factory(mocker: Any) -> None:
+    """Test using custom cursor factory in PostgreSQL adapter."""
+    connection, _ = setup_mock_pg_connection(mocker)
+    mock_factory = mocker.Mock()
+    
+    adapter = PostgreSQLAdapter(
+        connection_params={
+            "host": "localhost",
+            "database": "test"
+        },
+        cursor_factory=mock_factory
+    )
+    
+    connection.cursor.assert_called_once_with(cursor_factory=mock_factory)
 
 
 class TestPostgreSQLAdapter:

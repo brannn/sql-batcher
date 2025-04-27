@@ -6,10 +6,11 @@ batching SQL statements based on size limits.
 """
 
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from sql_batcher.insert_merger import InsertMerger
 from sql_batcher.query_collector import QueryCollector
+from sql_batcher.adapters.base import SQLAdapter
 
 
 class SQLBatcher:
@@ -37,42 +38,16 @@ class SQLBatcher:
 
     def __init__(
         self,
-        max_bytes: int = 1_000_000,
-        delimiter: str = ";",
-        dry_run: bool = False,
-        auto_adjust_for_columns: bool = True,
-        reference_column_count: int = 5,
-        min_adjustment_factor: float = 0.2,
-        max_adjustment_factor: float = 5.0,
-        merge_inserts: bool = False,
-    ):
-        """
-        Initialize SQL Batcher.
-
-        Args:
-            max_bytes: Maximum batch size in bytes
-            delimiter: SQL statement delimiter
-            dry_run: Whether to operate in dry run mode (without executing)
-            auto_adjust_for_columns: Whether to dynamically adjust batch size based on column count
-            reference_column_count: The reference column count for auto-adjustment (baseline)
-            min_adjustment_factor: Minimum adjustment factor for batch size
-            max_adjustment_factor: Maximum adjustment factor for batch size
-            merge_inserts: Whether to merge compatible INSERT statements for better performance
-        """
-        self.max_bytes = max_bytes
-        self.delimiter = delimiter
-        self.dry_run = dry_run
-        self.auto_adjust_for_columns = auto_adjust_for_columns
-        self.reference_column_count = reference_column_count
-        self.min_adjustment_factor = min_adjustment_factor
-        self.max_adjustment_factor = max_adjustment_factor
-        self.merge_inserts = merge_inserts
-        self.current_batch: List[str] = []
-        self.current_size: int = 0
-
-        # Column detection state
-        self.column_count: Optional[int] = None
-        self.adjustment_factor: float = 1.0
+        adapter: SQLAdapter,
+        max_bytes: Optional[int] = None,
+        batch_mode: bool = True,
+        **kwargs: Any
+    ) -> None:
+        """Initialize the SQL batcher."""
+        self._adapter = adapter
+        self._max_bytes = max_bytes or adapter.get_max_query_size()
+        self._batch_mode = batch_mode
+        self._collector = QueryCollector(**kwargs)
 
     def detect_column_count(self, statement: str) -> Optional[int]:
         """
@@ -124,33 +99,33 @@ class SQLBatcher:
         Args:
             statement: SQL statement to analyze
         """
-        if not self.auto_adjust_for_columns:
+        if not self._batch_mode:
             return
 
         # Only detect columns if we haven't already
-        if self.column_count is None:
+        if self._collector.get_column_count() is None:
             detected_count = self.detect_column_count(statement)
             if detected_count is not None:
-                self.column_count = detected_count
+                self._collector.set_column_count(detected_count)
 
                 # Calculate adjustment factor
                 # More columns -> smaller batches (lower adjusted max_bytes)
                 # Fewer columns -> larger batches (higher adjusted max_bytes)
-                raw_factor = self.reference_column_count / max(1, self.column_count)
+                raw_factor = self._collector.get_reference_column_count() / max(1, self._collector.get_column_count())
 
                 # Clamp to min/max bounds
-                self.adjustment_factor = max(
-                    self.min_adjustment_factor,
-                    min(self.max_adjustment_factor, raw_factor),
-                )
+                self._collector.set_adjustment_factor(max(
+                    self._collector.get_min_adjustment_factor(),
+                    min(self._collector.get_max_adjustment_factor(), raw_factor),
+                ))
 
                 # Logging for debugging
                 import logging
 
                 logging.debug(
-                    f"Column-based adjustment: detected {self.column_count} columns, "
-                    f"reference is {self.reference_column_count}, "
-                    f"adjustment factor is {self.adjustment_factor:.2f}"
+                    f"Column-based adjustment: detected {self._collector.get_column_count()} columns, "
+                    f"reference is {self._collector.get_reference_column_count()}, "
+                    f"adjustment factor is {self._collector.get_adjustment_factor():.2f}"
                 )
 
     def get_adjusted_max_bytes(self) -> int:
@@ -160,10 +135,10 @@ class SQLBatcher:
         Returns:
             Adjusted max_bytes value
         """
-        if not self.auto_adjust_for_columns or self.adjustment_factor == 1.0:
-            return self.max_bytes
+        if not self._batch_mode or self._collector.get_adjustment_factor() == 1.0:
+            return self._max_bytes
 
-        return int(self.max_bytes * self.adjustment_factor)
+        return int(self._max_bytes * self._collector.get_adjustment_factor())
 
     def add_statement(self, statement: str) -> bool:
         """
@@ -179,26 +154,25 @@ class SQLBatcher:
         self.update_adjustment_factor(statement)
 
         # Ensure statement ends with delimiter
-        if not statement.strip().endswith(self.delimiter):
-            statement = statement.strip() + self.delimiter
+        if not statement.strip().endswith(self._collector.get_delimiter()):
+            statement = statement.strip() + self._collector.get_delimiter()
 
         # Add statement to batch
-        self.current_batch.append(statement)
+        self._collector.collect(statement)
 
         # Update size
         statement_size = len(statement.encode("utf-8"))
-        self.current_size += statement_size
+        self._collector.update_current_size(statement_size)
 
         # Get adjusted max_bytes for comparison
         adjusted_max_bytes = self.get_adjusted_max_bytes()
 
         # Check if batch should be flushed
-        return self.current_size >= adjusted_max_bytes
+        return self._collector.get_current_size() >= adjusted_max_bytes
 
     def reset(self) -> None:
         """Reset the current batch."""
-        self.current_batch = []
-        self.current_size = 0
+        self._collector.reset()
 
     def flush(
         self,
@@ -217,16 +191,16 @@ class SQLBatcher:
         Returns:
             Number of statements flushed
         """
-        count = len(self.current_batch)
+        count = len(self._collector.get_batch())
 
         if count == 0:
             return 0
 
         # Join statements
-        batch_sql = "\n".join(self.current_batch)
+        batch_sql = "\n".join(self._collector.get_batch())
 
         # If in dry run mode, just collect the queries
-        if self.dry_run:
+        if self._collector.is_dry_run():
             if query_collector:
                 query_collector.collect(batch_sql, metadata)
         else:
@@ -256,7 +230,7 @@ class SQLBatcher:
         Returns:
             Optimized list of SQL statements with compatible INSERTs merged.
         """
-        merger = InsertMerger(self.max_bytes)
+        merger = InsertMerger(self.get_adjusted_max_bytes())
         merged_statements: List[str] = []
 
         for statement in statements:
@@ -292,31 +266,31 @@ class SQLBatcher:
         total_processed = 0
 
         # Apply insert merging if enabled
-        if self.merge_inserts:
+        if self._batch_mode:
             statements = self._merge_insert_statements(statements)
 
         # Analyze first few statements to establish column count if enabled
-        if self.auto_adjust_for_columns and len(statements) > 0:
+        if self._batch_mode and len(statements) > 0:
             # Try to detect columns from the first 5 statements (or fewer if less available)
             for i in range(min(5, len(statements))):
                 self.update_adjustment_factor(statements[i])
-                if self.column_count is not None:
+                if self._collector.get_column_count() is not None:
                     # We found a valid column count, no need to check more
                     break
 
-            if self.column_count is not None:
+            if self._collector.get_column_count() is not None:
                 import logging
 
                 logging.info(
-                    f"Column-based batch sizing active: {self.column_count} columns detected, "
-                    f"adjustment factor: {self.adjustment_factor:.2f}x, "
+                    f"Column-based batch sizing active: {self._collector.get_column_count()} columns detected, "
+                    f"adjustment factor: {self._collector.get_adjustment_factor():.2f}x, "
                     f"effective max_bytes: {self.get_adjusted_max_bytes()} "
-                    f"(base: {self.max_bytes})"
+                    f"(base: {self._max_bytes})"
                 )
 
         for statement in statements:
             # Update adjustment factor if needed (in case not already set)
-            if self.auto_adjust_for_columns and self.column_count is None:
+            if self._batch_mode and self._collector.get_column_count() is None:
                 self.update_adjustment_factor(statement)
 
             # Handle oversized statements
@@ -330,10 +304,10 @@ class SQLBatcher:
                 )
 
                 # Handle the oversized statement individually
-                if not statement.strip().endswith(self.delimiter):
-                    statement = statement.strip() + self.delimiter
+                if not statement.strip().endswith(self._collector.get_delimiter()):
+                    statement = statement.strip() + self._collector.get_delimiter()
 
-                if self.dry_run:
+                if self._collector.is_dry_run():
                     if query_collector:
                         query_collector.collect(statement, metadata)
                 else:
@@ -356,3 +330,125 @@ class SQLBatcher:
         total_processed += self.flush(execute_callback, query_collector, metadata)
 
         return total_processed
+
+    def process_batch(
+        self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
+    ) -> List[Any]:
+        """
+        Process a batch of SQL statements.
+
+        Args:
+            statements: List of SQL statements to process
+            execute_func: Optional custom function to execute SQL
+
+        Returns:
+            List of results from executed statements
+        """
+        if not self._batch_mode:
+            return self.process_statements(statements, execute_func)
+            
+        # Collect all statements
+        for statement in statements:
+            self._collector.collect(statement)
+            
+        # Get the batch
+        batch = self._collector.get_batch()
+        if not batch:
+            return []
+            
+        # Execute the batch
+        if execute_func:
+            result = execute_func(batch)
+        else:
+            result = self._adapter.execute(batch)
+            
+        # Reset the collector
+        self._collector.reset()
+        
+        return [result]
+
+    def process_stream(
+        self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
+    ) -> List[Any]:
+        """
+        Process a stream of SQL statements.
+
+        Args:
+            statements: List of SQL statements to process
+            execute_func: Optional custom function to execute SQL
+
+        Returns:
+            List of results from executed statements
+        """
+        results = []
+        for statement in statements:
+            # Collect the statement
+            self._collector.collect(statement)
+            
+            # Execute if batch is full
+            if self._collector.get_current_size() >= self.get_adjusted_max_bytes():
+                # Get the batch
+                batch = self._collector.get_batch()
+                if batch:
+                    # Execute the batch
+                    if execute_func:
+                        result = execute_func(batch)
+                    else:
+                        result = self._adapter.execute(batch)
+                    results.append(result)
+                    
+                # Reset the collector
+                self._collector.reset()
+                
+        # Process any remaining statements
+        if self._collector.get_current_size() > 0:
+            # Get the batch
+            batch = self._collector.get_batch()
+            if batch:
+                # Execute the batch
+                if execute_func:
+                    result = execute_func(batch)
+                else:
+                    result = self._adapter.execute(batch)
+                results.append(result)
+                
+            # Reset the collector
+            self._collector.reset()
+            
+        return results
+
+    def process_chunk(
+        self, statements: List[str], execute_func: Optional[Callable[[str], Any]] = None
+    ) -> List[Any]:
+        """
+        Process a chunk of SQL statements.
+
+        Args:
+            statements: List of SQL statements to process
+            execute_func: Optional custom function to execute SQL
+
+        Returns:
+            List of results from executed statements
+        """
+        if not self._batch_mode:
+            return self.process_statements(statements, execute_func)
+            
+        # Collect all statements
+        for statement in statements:
+            self._collector.collect(statement)
+            
+        # Get the batch
+        batch = self._collector.get_batch()
+        if not batch:
+            return []
+            
+        # Execute the batch
+        if execute_func:
+            result = execute_func(batch)
+        else:
+            result = self._adapter.execute(batch)
+            
+        # Reset the collector
+        self._collector.reset()
+        
+        return [result]

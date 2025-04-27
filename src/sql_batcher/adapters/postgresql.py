@@ -7,7 +7,7 @@ optimizations for PostgreSQL features like COPY commands and transaction managem
 
 import csv
 import io
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from sql_batcher.adapters.base import SQLAdapter
 
@@ -35,6 +35,8 @@ class PostgreSQLAdapter(SQLAdapter):
         isolation_level: Transaction isolation level (read_committed, etc.)
         cursor_factory: Optional cursor factory class
         application_name: Optional application name for monitoring
+        max_query_size: Optional maximum query size in bytes
+        fetch_results: Whether to fetch results after execution
     """
 
     def __init__(
@@ -43,7 +45,9 @@ class PostgreSQLAdapter(SQLAdapter):
         isolation_level: Optional[str] = None,
         cursor_factory: Optional[Any] = None,
         application_name: Optional[str] = None,
-    ):
+        max_query_size: Optional[int] = None,
+        fetch_results: bool = True
+    ) -> None:
         """Initialize the PostgreSQL adapter."""
         if not PSYCOPG2_AVAILABLE:
             raise ImportError(
@@ -58,6 +62,8 @@ class PostgreSQLAdapter(SQLAdapter):
 
         # Create connection
         self._connection = psycopg2.connect(**connection_params)
+        self._max_query_size = max_query_size or 5_000_000
+        self._fetch_results = fetch_results
 
         # Set isolation level if provided
         if isolation_level:
@@ -95,7 +101,7 @@ class PostgreSQLAdapter(SQLAdapter):
         Returns:
             Maximum query size in bytes
         """
-        return 5_000_000  # 5MB default limit (conservative)
+        return self._max_query_size
 
     def execute(self, sql: str) -> List[Any]:
         """
@@ -115,8 +121,9 @@ class PostgreSQLAdapter(SQLAdapter):
             self._cursor.execute(sql)
 
             # For SELECT statements, return the results
-            if self._cursor.description is not None:
-                return self._cursor.fetchall()
+            if self._cursor.description is not None and self._fetch_results:
+                result = self._cursor.fetchall()
+                return list(result) if result is not None else []
 
             # For other statements, return empty list
             return []
@@ -260,34 +267,37 @@ class PostgreSQLAdapter(SQLAdapter):
         Create indices on a table.
 
         Args:
-            table_name: Target table name
-            indices: List of index definitions
-                Each index is a dict with:
-                - columns: List of column names
-                - name: Index name
-                - unique: Whether the index is unique (optional)
-                - method: Index method (btree, hash, gin, etc.) (optional)
-                - where: WHERE clause (optional)
+            table_name: Name of the table
+            indices: List of index definitions, each containing:
+                    - name: Name of the index
+                    - columns: Column or list of columns to index
+                    - type: Optional index type (btree, hash, etc.)
+                    - unique: Optional boolean for unique index
 
         Returns:
-            List of created index names
+            List of SQL statements executed
         """
-        created_indices = []
-
-        for index_def in indices:
-            columns = index_def.get("columns", [])
-            if not columns:
+        statements: List[str] = []
+        for index in indices:
+            name = index.get("name")
+            columns = index.get("columns", [])
+            if isinstance(columns, str):
+                columns = [columns]
+            
+            index_type = index.get("type", "btree")
+            unique = index.get("unique", False)
+            
+            if not name or not columns:
                 continue
-
-            index_name = index_def.get("name", f"idx_{table_name}_{'_'.join(columns)}")
-            unique = "UNIQUE " if index_def.get("unique", False) else ""
-            method = index_def.get("method", "btree")
-            where = f" WHERE {index_def['where']}" if "where" in index_def else ""
-
-            column_clause = ", ".join(columns)
-
-            sql = f"CREATE {unique}INDEX IF NOT EXISTS {index_name} ON {table_name} USING {method} ({column_clause}){where}"
+                
+            unique_str = "UNIQUE " if unique else ""
+            columns_str = ", ".join(cast(List[str], columns))
+            
+            sql = (
+                f"CREATE {unique_str}INDEX {name} "
+                f"ON {table_name} USING {index_type} ({columns_str})"
+            )
+            statements.append(sql)
             self.execute(sql)
-            created_indices.append(index_name)
-
-        return created_indices
+            
+        return statements

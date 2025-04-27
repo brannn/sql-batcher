@@ -1,11 +1,93 @@
 from unittest.mock import MagicMock
 
 import pytest
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 # Mark all tests in this file as using bigquery-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.bigquery]
 
 from sql_batcher.adapters.bigquery import BigQueryAdapter
+
+
+def setup_mock_bq_connection(mocker: Any) -> Tuple[Any, Any]:
+    """Set up mock BigQuery client and job."""
+    mock_job = mocker.Mock()
+    mock_client = mocker.Mock()
+    mock_client.query.return_value = mock_job
+    mocker.patch("google.cloud.bigquery.Client", return_value=mock_client)
+    return mock_client, mock_job
+
+
+@pytest.fixture
+def mock_bq(mocker: Any) -> Tuple[BigQueryAdapter, Any, Any]:
+    """Create a mock BigQuery adapter with mocked client and job."""
+    client, job = setup_mock_bq_connection(mocker)
+    adapter = BigQueryAdapter(
+        project_id="test-project",
+        dataset_id="test_dataset",
+        use_batch_mode=True
+    )
+    return adapter, client, job
+
+
+def test_bq_execute(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
+    """Test executing a query with BigQuery adapter."""
+    adapter, client, job = mock_bq
+    job.result.return_value = [
+        (1, "test1"),
+        (2, "test2"),
+        (3, "test3")
+    ]
+    
+    result = adapter.execute("SELECT * FROM test_table")
+    assert result == [(1, "test1"), (2, "test2"), (3, "test3")]
+    client.query.assert_called_once()
+
+
+def test_bq_execute_no_results(mock_bq: Tuple[BigQueryAdapter, Any, Any]) -> None:
+    """Test executing a non-SELECT query with BigQuery adapter."""
+    adapter, client, job = mock_bq
+    job.result.return_value = []
+    
+    result = adapter.execute("CREATE TABLE test_table (id INT64)")
+    assert result == []
+    client.query.assert_called_once()
+
+
+def test_bq_batch_mode(mocker: Any) -> None:
+    """Test batch mode configuration in BigQuery adapter."""
+    client, _ = setup_mock_bq_connection(mocker)
+    
+    adapter = BigQueryAdapter(
+        project_id="test-project",
+        dataset_id="test_dataset",
+        use_batch_mode=True
+    )
+    
+    adapter.execute("SELECT * FROM test_table")
+    
+    # Verify that batch mode configuration was used
+    client.query.assert_called_once()
+    job_config = client.query.call_args[1]["job_config"]
+    assert job_config.priority == "BATCH"
+
+
+def test_bq_dataset_location(mocker: Any) -> None:
+    """Test dataset location configuration in BigQuery adapter."""
+    client, _ = setup_mock_bq_connection(mocker)
+    
+    adapter = BigQueryAdapter(
+        project_id="test-project",
+        dataset_id="test_dataset",
+        location="US"
+    )
+    
+    adapter.execute("SELECT * FROM test_table")
+    
+    # Verify that location was used
+    client.query.assert_called_once()
+    job_config = client.query.call_args[1]["job_config"]
+    assert job_config.location == "US"
 
 
 class TestBigQueryAdapter:

@@ -5,8 +5,9 @@ This module provides abstract base classes for database adapters used by SQL Bat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Sequence, TypeVar, Union, cast
 
+T = TypeVar('T')
 
 class SQLAdapter(ABC):
     """
@@ -28,6 +29,7 @@ class SQLAdapter(ABC):
         Returns:
             List of result rows
         """
+        pass
 
     @abstractmethod
     def get_max_query_size(self) -> int:
@@ -37,10 +39,12 @@ class SQLAdapter(ABC):
         Returns:
             Maximum query size in bytes
         """
+        pass
 
     @abstractmethod
     def close(self) -> None:
         """Close the database connection."""
+        pass
 
     def begin_transaction(self) -> None:
         """
@@ -49,6 +53,7 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
+        pass
 
     def commit_transaction(self) -> None:
         """
@@ -57,6 +62,7 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
+        pass
 
     def rollback_transaction(self) -> None:
         """
@@ -65,6 +71,7 @@ class SQLAdapter(ABC):
         Default implementation does nothing.
         Subclasses should override if the database supports transactions.
         """
+        pass
 
 
 class GenericAdapter(SQLAdapter):
@@ -85,10 +92,10 @@ class GenericAdapter(SQLAdapter):
     def __init__(
         self,
         connection: Any,
-        execute_func: Optional[Callable[[str], Any]] = None,
+        execute_func: Optional[Callable[[str], Sequence[Any]]] = None,
         close_func: Optional[Callable[[], None]] = None,
         max_query_size: Optional[int] = None,
-    ):
+    ) -> None:
         """Initialize the generic adapter."""
         self._connection = connection
         self._execute_func = execute_func
@@ -107,19 +114,24 @@ class GenericAdapter(SQLAdapter):
         """
         if self._execute_func:
             # Use the provided execute function
-            return self._execute_func(sql)
+            result = self._execute_func(sql)
+            return list(result) if result is not None else []
         elif hasattr(self._connection, "execute"):
             # Try to use connection's execute method directly
             result = self._connection.execute(sql)
+            if result is None:
+                return []
             if hasattr(result, "fetchall"):
-                return result.fetchall()
-            return result
+                return list(result.fetchall())
+            return list(result)
         elif hasattr(self._connection, "cursor"):
             # Try to get a cursor and use its execute method
             cursor = self._connection.cursor()
+            if cursor is None:
+                return []
             cursor.execute(sql)
             if cursor.description is not None:
-                return cursor.fetchall()
+                return list(cursor.fetchall())
             return []
         else:
             raise ValueError(
