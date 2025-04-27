@@ -77,7 +77,10 @@ class GenericAdapter(SQLAdapter):
             if self._cursor is None:
                 return []
             self._cursor.execute(sql)
-            if hasattr(self._cursor, "description") and self._cursor.description is not None:
+            if (
+                hasattr(self._cursor, "description")
+                and self._cursor.description is not None
+            ):
                 try:
                     result = self._cursor.fetchall()
                     return list(result) if result is not None else []
