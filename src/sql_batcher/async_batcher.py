@@ -8,11 +8,43 @@ the main SQLBatcher class for batching SQL statements based on size limits.
 import re
 from types import TracebackType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
+import time
 
 from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.insert_merger import InsertMerger
 from sql_batcher.plugins import HookType, Plugin, PluginManager
 from sql_batcher.query_collector import QueryCollector
+
+
+class SavepointContext:
+    """Context manager for savepoints."""
+
+    def __init__(self, batcher: "AsyncSQLBatcher", name: str) -> None:
+        """Initialize the savepoint context.
+
+        Args:
+            batcher: The batcher instance
+            name: Name of the savepoint
+        """
+        self.batcher = batcher
+        self.name = name
+
+    async def __aenter__(self) -> None:
+        """Enter the savepoint context."""
+        await self.batcher._adapter.create_savepoint(self.name)
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the savepoint context.
+
+        Args:
+            exc_type: Exception type if an exception occurred
+            exc_val: Exception value if an exception occurred
+            exc_tb: Exception traceback if an exception occurred
+        """
+        if exc_type is not None:
+            await self.batcher._adapter.rollback_to_savepoint(self.name)
+        else:
+            await self.batcher._adapter.release_savepoint(self.name)
 
 
 class AsyncSQLBatcher:
@@ -40,24 +72,29 @@ class AsyncSQLBatcher:
     def __init__(
         self,
         adapter: AsyncSQLAdapter,
-        max_bytes: Optional[int] = None,
-        batch_mode: bool = True,
-        **kwargs: Any,
+        max_batch_size: int = 1000,
+        max_batch_bytes: int = 900_000,
     ) -> None:
-        """Initialize the async SQL batcher."""
+        """Initialize the AsyncSQLBatcher.
+
+        Args:
+            adapter: The SQL adapter to use
+            max_batch_size: Maximum number of statements in a batch
+            max_batch_bytes: Maximum size of a batch in bytes
+        """
         self._adapter = adapter
-        self._max_bytes = max_bytes or 1_000_000  # Default to 1MB if not specified
-        self._batch_mode = batch_mode
-        self._collector = QueryCollector(**kwargs)
+        self.max_batch_size = max_batch_size
+        self.max_batch_bytes = max_batch_bytes
+        self.current_batch: List[str] = []
+        self.current_size = 0
+        self._collector = QueryCollector()
         self._plugin_manager = PluginManager()
 
         # Expose public attributes
-        self.max_bytes = self._max_bytes
+        self.max_bytes = 1_000_000  # Default to 1MB if not specified
         self.delimiter = self._collector.get_delimiter()
         self.dry_run = self._collector.is_dry_run()
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
-        self.auto_adjust_for_columns = kwargs.get("auto_adjust_for_columns", False)
+        self.auto_adjust_for_columns = False
         self.reference_column_count = self._collector.get_reference_column_count()
         self.min_adjustment_factor = self._collector.get_min_adjustment_factor()
         self.max_adjustment_factor = self._collector.get_max_adjustment_factor()
@@ -138,7 +175,7 @@ class AsyncSQLBatcher:
         Args:
             statement: SQL statement to analyze
         """
-        if not self._batch_mode or not self.auto_adjust_for_columns:
+        if not self.auto_adjust_for_columns:
             return
 
         # Only detect columns if we haven't already
@@ -179,44 +216,36 @@ class AsyncSQLBatcher:
         Returns:
             Adjusted max_bytes value
         """
-        if not self._batch_mode or self._collector.get_adjustment_factor() == 1.0:
-            return self._max_bytes
+        if self.adjustment_factor == 1.0:
+            return self.max_bytes
 
-        return int(self._max_bytes * self._collector.get_adjustment_factor())
+        return int(self.max_bytes * self.adjustment_factor)
 
     def add_statement(self, statement: str) -> bool:
-        """
-        Add a statement to the current batch.
+        """Add a statement to the current batch.
 
         Args:
-            statement: SQL statement to add
+            statement: The SQL statement to add.
 
         Returns:
-            True if the batch should be flushed, False otherwise
+            True if the statement should be flushed, False otherwise.
         """
-        # Update adjustment factor if needed
-        self.update_adjustment_factor(statement)
-
-        # Ensure statement ends with delimiter
-        if not statement.strip().endswith(self._collector.get_delimiter()):
-            statement = statement.strip() + self._collector.get_delimiter()
-
-        # Add statement to batch
-        self._collector.collect(statement)
-
-        # Update size
+        # Check if adding this statement would exceed the limits
         statement_size = len(statement.encode("utf-8"))
-        self._collector.update_current_size(statement_size)
+        new_size = self.current_size + statement_size
+        new_count = len(self.current_batch) + 1
 
-        # Update public attributes
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
+        # Check if we should flush before adding
+        should_flush = (
+            new_count >= self.max_batch_size
+            or new_size >= self.max_batch_bytes
+        )
 
-        # Get adjusted max_bytes for comparison
-        adjusted_max_bytes = self.get_adjusted_max_bytes()
+        # Add the statement to the current batch
+        self.current_batch.append(statement)
+        self.current_size = new_size
 
-        # Check if batch should be flushed
-        return self._collector.get_current_size() >= adjusted_max_bytes
+        return should_flush
 
     def reset(self) -> None:
         """Reset the current batch."""
@@ -230,98 +259,53 @@ class AsyncSQLBatcher:
         execute_callback: Callable[[str], Awaitable[Any]],
         query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> int:
+    ) -> List[str]:
         """Flush the current batch of statements.
 
         Args:
-            execute_callback: Async function to execute SQL statements
-            query_collector: Optional query collector for tracking
-            metadata: Optional metadata for hooks
+            execute_callback: Callback function to execute each statement
+            query_collector: Optional QueryCollector for tracking
+            metadata: Optional metadata to pass to hooks
 
         Returns:
-            Number of statements processed
-
-        Raises:
-            Exception: If batch processing fails
+            List of processed statements
         """
         if not self.current_batch:
-            return 0
+            return []
+
+        # Create a savepoint for this batch
+        savepoint_name = f"batch_{id(self)}"
+        await self._adapter.create_savepoint(savepoint_name)
 
         try:
-            # Create a savepoint before processing the batch
-            savepoint_name = f"batch_{id(self.current_batch)}"
-            await self._adapter.create_savepoint(savepoint_name)
-
-            # Execute pre-batch hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.PRE_BATCH,
-                self.current_batch,
-                metadata,
-            )
-
-            # Merge INSERT statements if possible
-            merged_statements = self._merge_insert_statements(self.current_batch)
-
-            # Execute pre-execute hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.PRE_EXECUTE,
-                merged_statements,
-                metadata,
-            )
-
-            # Execute statements
-            results = []
-            for statement in merged_statements:
+            # Execute each statement in the batch
+            processed_statements = []
+            for statement in self.current_batch:
                 try:
-                    result = await execute_callback(statement)
-                    results.append(result)
+                    await execute_callback(statement)
+                    processed_statements.append(statement)
                 except Exception as e:
-                    # Rollback to savepoint on error
+                    # Rollback to the savepoint
                     await self._adapter.rollback_to_savepoint(savepoint_name)
-                    # Execute error hooks
-                    await self._plugin_manager.execute_hooks(
-                        HookType.ON_ERROR,
-                        [statement],
-                        metadata,
-                        e,
-                    )
-                    raise
-
-            # Execute post-execute hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.POST_EXECUTE,
-                merged_statements,
-                metadata,
-            )
-
-            # Update collector if provided
-            if query_collector:
-                query_collector.update_metadata(metadata or {})
-
-            # Execute post-batch hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.POST_BATCH,
-                merged_statements,
-                metadata,
-            )
+                    # Reset the batch
+                    self.reset()
+                    # Re-raise the exception
+                    raise e
 
             # Release the savepoint
             await self._adapter.release_savepoint(savepoint_name)
 
-            # Reset batch
+            # Reset the batch
             self.reset()
 
-            return len(results)
-
+            return processed_statements
         except Exception as e:
-            # Execute error hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.ON_ERROR,
-                self.current_batch,
-                metadata,
-                e,
-            )
-            raise
+            # Rollback to the savepoint
+            await self._adapter.rollback_to_savepoint(savepoint_name)
+            # Reset the batch
+            self.reset()
+            # Re-raise the exception
+            raise e
 
     def _merge_insert_statements(self, statements: List[str]) -> List[str]:
         """
@@ -340,37 +324,33 @@ class AsyncSQLBatcher:
         self,
         statements: List[str],
         execute_callback: Callable[[str], Awaitable[Any]],
-        query_collector: Optional[QueryCollector] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> int:
-        """
-        Process a list of SQL statements in batches.
+    ) -> List[str]:
+        """Process a list of statements.
 
         Args:
             statements: List of SQL statements to process
-            execute_callback: Async function to execute SQL statements
-            query_collector: Optional QueryCollector for tracking
-            metadata: Optional metadata to pass to the collector
+            execute_callback: Callback function to execute each statement
+            metadata: Optional metadata to pass to hooks
 
         Returns:
-            Number of statements processed
+            List of processed statements
         """
-        total_processed = 0
+        query_collector = QueryCollector()
+        processed_statements: List[str] = []
 
         for statement in statements:
             should_flush = self.add_statement(statement)
             if should_flush:
-                processed = await self.flush(
-                    execute_callback, query_collector, metadata
-                )
-                total_processed += processed
+                processed = await self.flush(execute_callback, query_collector, metadata)
+                processed_statements.extend(processed)
 
         # Flush any remaining statements
         if self.current_batch:
             processed = await self.flush(execute_callback, query_collector, metadata)
-            total_processed += processed
+            processed_statements.extend(processed)
 
-        return total_processed
+        return processed_statements
 
     async def process_batch(
         self,
@@ -448,53 +428,56 @@ class AsyncSQLBatcher:
         return results
 
     async def __aenter__(self) -> "AsyncSQLBatcher":
-        """Enter the async context manager.
-
-        This method is called when entering an async with block. It initializes
-        the batcher and executes any plugin initialization hooks.
-
-        Returns:
-            The batcher instance for use in the async with block
-        """
-        # Execute plugin initialization hooks
-        await self._plugin_manager.execute_hooks(
-            HookType.PRE_BATCH, [], {"context": "initialization"}
-        )
+        """Enter the async context."""
+        await self._adapter.begin_transaction()
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> None:
-        """Exit the async context manager.
-
-        This method is called when exiting an async with block. It ensures that
-        any remaining batches are flushed and resources are cleaned up.
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the async context.
 
         Args:
-            exc_type: The type of exception that occurred, if any
-            exc_val: The exception instance that occurred, if any
-            exc_tb: The traceback for the exception, if any
+            exc_type: Exception type if an exception occurred
+            exc_val: Exception value if an exception occurred
+            exc_tb: Exception traceback if an exception occurred
         """
-        try:
-            # Flush any remaining batches
-            if self.current_batch:
-                await self.flush(
-                    self._adapter.execute, self._collector, {"context": "cleanup"}
-                )
-        except Exception as e:
-            # Execute error hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.ON_ERROR, self.current_batch, {"context": "cleanup"}, e
-            )
-            raise
-        finally:
-            # Always clean up state
-            self.reset()
+        if exc_type is not None:
+            await self._adapter.rollback_transaction()
+        else:
+            await self._adapter.commit_transaction()
 
-            # Execute plugin cleanup hooks
-            await self._plugin_manager.execute_hooks(
-                HookType.POST_BATCH, [], {"context": "cleanup"}
-            )
+    async def create_savepoint(self, name: str) -> None:
+        """Create a savepoint in the current transaction.
+
+        Args:
+            name: Name of the savepoint to create
+        """
+        await self._adapter.create_savepoint(name)
+
+    async def rollback_to_savepoint(self, name: str) -> None:
+        """Rollback to a previously created savepoint.
+
+        Args:
+            name: Name of the savepoint to rollback to
+        """
+        await self._adapter.rollback_to_savepoint(name)
+
+    async def release_savepoint(self, name: str) -> None:
+        """Release a previously created savepoint.
+
+        Args:
+            name: Name of the savepoint to release
+        """
+        await self._adapter.release_savepoint(name)
+
+    def savepoint(self, name: Optional[str] = None) -> SavepointContext:
+        """Create a savepoint context.
+
+        Args:
+            name: Optional name for the savepoint. If not provided, a unique name will be generated.
+
+        Returns:
+            A savepoint context manager.
+        """
+        if name is None:
+            name = f"sp_{id(self)}_{int(time.time())}"
+        return SavepointContext(self, name)
