@@ -23,26 +23,32 @@ def run_core_tests(options: List[str] = None) -> int:
     Returns:
         Exit code from pytest
     """
-    cmd = [
-        "pytest",
-        "tests/test_batcher.py",
-        "tests/test_adapters.py",
-        "tests/test_async_batcher.py",
-        "tests/test_async_batcher_context.py",
-        "tests/test_hook_manager.py",
-        "tests/test_plugins.py",
-        "tests/test_insert_merger.py",
-        "tests/test_query_collector.py",
-        "tests/test_retry_manager.py",
-        "tests/test_batch_manager.py",
-        "-k", "not postgresql and not snowflake and not trino and not bigquery",
-        "--ignore=tests/test_async_integration.py",
-        "--ignore=tests/test_postgresql_adapter.py",
-        "--ignore=tests/test_snowflake_adapter.py",
-        "--ignore=tests/test_trino_adapter.py",
-        "--ignore=tests/test_bigquery_adapter.py",
-        "--ignore=tests/*.bak"
-    ]
+    # In CI environment, we want to run all core tests
+    if os.environ.get("CI"):
+        cmd = [
+            "pytest",
+            "tests/test_batcher.py",
+            "tests/test_adapters.py",
+            "tests/test_async_batcher.py",
+            "tests/test_async_batcher_context.py",
+            "tests/test_hook_manager.py",
+            "tests/test_plugins.py",
+            "tests/test_insert_merger.py",
+            "tests/test_query_collector.py",
+            "tests/test_retry_manager.py",
+            "tests/test_batch_manager.py",
+            "-k", "not postgresql and not snowflake and not trino and not bigquery"
+        ]
+    else:
+        # In local environment, we can be more selective
+        cmd = [
+            "pytest",
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_defaults",
+            "tests/test_batcher.py::TestSQLBatcher::test_init_with_custom_values",
+            "tests/test_batcher.py::TestSQLBatcher::test_add_statement",
+            "tests/test_batcher.py::TestSQLBatcher::test_reset",
+            "-v"
+        ]
 
     if options:
         cmd.extend(options)
