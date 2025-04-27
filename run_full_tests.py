@@ -23,7 +23,12 @@ def run_core_tests(options: List[str] = None) -> int:
     Returns:
         Exit code from pytest
     """
-    cmd = ["pytest", "tests/test_batcher.py", "tests/test_adapters.py::TestSQLAdapter"]
+    cmd = [
+        "pytest",
+        "tests/test_batcher.py",
+        "tests/test_adapters.py::TestSQLAdapter",
+        "tests/test_async_batcher.py",
+    ]
     
     if options:
         cmd.extend(options)
