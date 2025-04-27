@@ -18,6 +18,19 @@ from sql_batcher.exceptions import (
     MaxRetriesExceededError,
     TimeoutError,
 )
+from sql_batcher.hooks.plugins import (
+    HookContext,
+    HookType,
+    Plugin,
+    PluginManager,
+    SQLPreprocessor,
+    MetricsCollector,
+    QueryLogger,
+)
+from sql_batcher.insert_merger import InsertMerger
+from sql_batcher.query_collector import ListQueryCollector
+from sql_batcher.retry_manager import RetryManager
+from sql_batcher.batch_manager import BatchManager
 
 __all__ = [
     "AsyncSQLAdapter",
@@ -29,4 +42,15 @@ __all__ = [
     "BatchSizeExceededError",
     "MaxRetriesExceededError",
     "TimeoutError",
+    "HookContext",
+    "HookType",
+    "Plugin",
+    "PluginManager",
+    "SQLPreprocessor",
+    "MetricsCollector",
+    "QueryLogger",
+    "InsertMerger",
+    "ListQueryCollector",
+    "RetryManager",
+    "BatchManager",
 ]
