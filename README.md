@@ -24,34 +24,19 @@ A Python library for managing large volumes of SQL statements by batching them a
 SQL Batcher provides several key features to help manage large SQL operations:
 
 ### Query Batching
-- Automatically groups SQL statements into batches based on size limits
-- Prevents exceeding database query size constraints
-- Manages memory usage during large operations
-- Supports different batching strategies for different database systems
+SQL Batcher automatically groups SQL statements into batches based on size limits, preventing database query size constraints from being exceeded. It manages memory usage during large operations and supports different batching strategies for different database systems. The batching process is transparent and configurable, allowing you to optimize for your specific use case.
 
 ### Insert Merging
-- Combines compatible INSERT statements into single statements
-- Reduces the number of database calls
-- Maintains transaction integrity
-- Configurable merging rules
+The library can combine compatible INSERT statements into single statements, reducing the number of database calls while maintaining transaction integrity. This feature is particularly useful when inserting large datasets, as it can significantly reduce the overhead of multiple database round trips. The merging process is configurable and respects database-specific limitations.
 
 ### Database Adapters
-- Dedicated adapters for popular database systems
-- Consistent interface across different databases
-- Database-specific optimizations
-- Extensible adapter system
+SQL Batcher includes dedicated adapters for popular database systems, providing a consistent interface across different databases. Each adapter includes database-specific optimizations and follows best practices for that particular system. The adapter system is extensible, allowing you to create custom adapters for any database that supports SQL.
 
 ### Transaction Management
-- Automatic transaction handling
-- Configurable commit strategies
-- Error recovery and rollback support
-- Nested transaction support
+The library provides comprehensive transaction management, including automatic transaction handling, configurable commit strategies, and error recovery with rollback support. It supports nested transactions and ensures data consistency across batch operations. This makes it suitable for complex operations that require atomicity.
 
 ### Query Tracking
-- Monitor executed queries
-- Track batch sizes and execution times
-- Debug and optimize performance
-- Generate execution reports
+SQL Batcher includes built-in query tracking capabilities that allow you to monitor executed queries, track batch sizes and execution times, and generate execution reports. This feature is invaluable for debugging and optimizing performance, as it provides detailed insights into how your queries are being processed and where potential bottlenecks might exist.
 
 ## Installation
 
