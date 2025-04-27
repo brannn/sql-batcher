@@ -252,22 +252,18 @@ def spark_connection_params() -> Dict[str, str]:
 
 @pytest.fixture
 def mock_db_connection() -> MagicMock:
-    """Create a mock database connection."""
+    """Create a mock database connection for testing."""
     mock_connection = MagicMock()
     mock_cursor = MagicMock()
 
-    # Set up cursor behavior
+    # Configure cursor with initial state
     mock_cursor.description = [
         ["id", "INT", None, None, None, None, None],
         ["name", "VARCHAR", None, None, None, None, None],
     ]
-    mock_cursor.execute.return_value = None
     mock_cursor.fetchone.return_value = (1, "Test")
     mock_cursor.fetchmany.return_value = [(1, "Test")]
     mock_cursor.fetchall.return_value = [(1, "Test")]
-
-    # Configure cursor to maintain state
-    mock_cursor.reset_mock = MagicMock(return_value=None)
 
     # Configure cursor to handle execute calls
     def execute_side_effect(sql: str) -> None:
@@ -282,7 +278,11 @@ def mock_db_connection() -> MagicMock:
             mock_cursor.fetchall.return_value = []
         return None
 
-    mock_cursor.execute.side_effect = execute_side_effect
+    # Set up the execute method with side effect
+    mock_cursor.execute = MagicMock(side_effect=execute_side_effect)
+
+    # Set up cursor reset
+    mock_cursor.reset_mock = MagicMock(return_value=None)
 
     # Configure connection to return the mock cursor
     mock_connection.cursor = MagicMock(return_value=mock_cursor)

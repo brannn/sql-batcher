@@ -2,8 +2,8 @@
 Tests for SQL adapter base classes.
 """
 
-from typing import Any, List, Protocol, TypeVar
-from unittest.mock import MagicMock
+from typing import Any, List, Optional, Protocol, Tuple, TypeVar
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -16,7 +16,7 @@ T = TypeVar("T")
 class TestAdapter(Protocol):
     """Test adapter protocol."""
 
-    def execute(self, sql: str) -> List[Any]:
+    def execute(self, sql: str) -> List[Tuple[Any, ...]]:
         """Execute a SQL statement."""
         ...
 
@@ -28,59 +28,103 @@ class TestAdapter(Protocol):
         """Close the connection."""
         ...
 
-    def get_results(self) -> List[str]:
-        """Get executed statements."""
+    def begin_transaction(self) -> None:
+        """Begin a transaction."""
+        ...
+
+    def commit_transaction(self) -> None:
+        """Commit a transaction."""
+        ...
+
+    def rollback_transaction(self) -> None:
+        """Rollback a transaction."""
         ...
 
 
-class TestAdapterImpl:
-    """Test adapter implementation."""
+class TestAdapterImpl(SQLAdapter):
+    """Test implementation of SQLAdapter."""
 
-    def __init__(self) -> None:
-        self._max_query_size = 1000
-        self._results: List[str] = []
+    def __init__(self, max_query_size: Optional[int] = None):
+        """Initialize test adapter."""
+        self.max_query_size = max_query_size or 500_000
+        self.cursor = MagicMock()
+        self.connection = MagicMock()
+        self.connection.cursor.return_value = self.cursor
+        self.closed = False
+        self._executed_statements: List[str] = []
 
-    def execute(self, sql: str) -> List[Any]:
-        """Execute a SQL statement."""
-        self._results.append(sql)
+    def get_max_query_size(self) -> int:
+        """Get maximum query size."""
+        return self.max_query_size
+
+    def execute(self, sql: str) -> List[Tuple[Any, ...]]:
+        """Execute SQL statement."""
+        self._executed_statements.append(sql)
+        self.cursor.execute(sql)
+        if self.cursor.description is not None:
+            return self.cursor.fetchall()
         return []
 
-    def get_max_query_size(self) -> int:
-        """Get maximum query size."""
-        return self._max_query_size
-
     def close(self) -> None:
-        """Close the connection."""
-        pass
+        """Close connection."""
+        self.closed = True
+        self.cursor.close()
+        self.connection.close()
 
-    def get_results(self) -> List[str]:
-        """Get executed statements."""
-        return self._results
+    def begin_transaction(self) -> None:
+        """Begin transaction."""
+        self.connection.begin()
+
+    def commit_transaction(self) -> None:
+        """Commit transaction."""
+        self.connection.commit()
+
+    def rollback_transaction(self) -> None:
+        """Rollback transaction."""
+        self.connection.rollback()
+
+    def get_executed_statements(self) -> List[str]:
+        """Get list of executed SQL statements."""
+        return self._executed_statements
 
 
 def test_adapter_execute() -> None:
     """Test adapter execute method."""
     adapter = TestAdapterImpl()
     adapter.execute("SELECT 1")
-    assert adapter.get_results() == ["SELECT 1"]
+    assert adapter.get_executed_statements() == ["SELECT 1"]
 
 
 def test_adapter_max_query_size() -> None:
     """Test adapter max query size."""
     adapter = TestAdapterImpl()
-    assert adapter.get_max_query_size() == 1000
+    assert adapter.get_max_query_size() == 500_000  # Fixed to match default value
 
 
 def test_adapter_transaction() -> None:
     """Test adapter transaction methods."""
     adapter = TestAdapterImpl()
+
+    # Test basic transaction flow
     adapter.begin_transaction()
+    adapter.execute("INSERT INTO test VALUES (1)")
     adapter.commit_transaction()
+
+    # Verify calls were made in correct order
+    assert adapter.connection.begin.call_count == 1
+    assert adapter.cursor.execute.call_count == 1
+    assert adapter.connection.commit.call_count == 1
+
+    # Test rollback
+    adapter.begin_transaction()
+    adapter.execute("INSERT INTO test VALUES (2)")
     adapter.rollback_transaction()
+
+    assert adapter.connection.rollback.call_count == 1
 
 
 @pytest.fixture
-def adapter():
+def adapter() -> TestAdapterImpl:
     """Create a test adapter."""
     adapter = TestAdapterImpl()
     yield adapter
@@ -90,7 +134,7 @@ def adapter():
 def test_adapter_with_fixture(adapter: TestAdapterImpl) -> None:
     """Test adapter using fixture."""
     adapter.execute("SELECT 1")
-    assert adapter.get_results() == ["SELECT 1"]
+    assert adapter.get_executed_statements() == ["SELECT 1"]
 
 
 @pytest.mark.core
@@ -207,21 +251,54 @@ class TestGenericAdapter:
         )
 
     def test_transactions(self) -> None:
-        """Test transaction methods."""
-        # Begin a transaction
+        """Test transaction behavior."""
+        # Test successful transaction
         self.adapter.begin_transaction()
-
-        # Insert a row
-        self.adapter.execute("INSERT INTO test VALUES (4, 'Test 4')")
-
-        # Commit the transaction
+        self.adapter.execute("INSERT INTO test VALUES (1)")
+        self.adapter.execute("UPDATE test SET value = 2")
         self.adapter.commit_transaction()
+
+        assert self.connection.begin.call_count == 1
+        assert self.cursor.execute.call_count == 2
+        assert self.connection.commit.call_count == 1
 
         # Test rollback
         self.adapter.begin_transaction()
-        self.adapter.execute("INSERT INTO test VALUES (5, 'Test 5')")
+        self.adapter.execute("INSERT INTO test VALUES (3)")
         self.adapter.rollback_transaction()
 
-        # Verify connection methods were called
-        assert self.connection.commit.call_count >= 1
-        assert self.connection.rollback.call_count >= 1
+        assert self.connection.rollback.call_count == 1
+
+        # Reset mock call counts
+        self.connection.reset_mock()
+        self.cursor.reset_mock()
+
+        # Test nested transaction (should raise an error)
+        self.adapter.begin_transaction()
+        with pytest.raises(Exception):
+            self.adapter.begin_transaction()
+        self.adapter.rollback_transaction()
+
+    def test_transaction_error_handling(self) -> None:
+        """Test transaction error scenarios."""
+        # Test commit without begin
+        with pytest.raises(RuntimeError, match="No transaction in progress"):
+            self.adapter.commit_transaction()
+
+        # Test rollback without begin
+        with pytest.raises(RuntimeError, match="No transaction in progress"):
+            self.adapter.rollback_transaction()
+
+        # Test transaction with connection error
+        self.connection.begin.side_effect = Exception("Connection error")
+        with pytest.raises(Exception, match="Connection error"):
+            self.adapter.begin_transaction()
+
+        # Reset side effect
+        self.connection.begin.side_effect = None
+
+        # Test commit error
+        self.adapter.begin_transaction()
+        self.connection.commit.side_effect = Exception("Commit error")
+        with pytest.raises(Exception, match="Commit error"):
+            self.adapter.commit_transaction()
