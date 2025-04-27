@@ -5,11 +5,9 @@ This module provides abstract base classes for database adapters used by SQL Bat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, List, Optional, Sequence, Union
 
-__all__ = ["SQLAdapter", "AsyncSQLAdapter", "GenericAdapter", "T"]
-
-T = TypeVar("T")
+__all__ = ["SQLAdapter", "AsyncSQLAdapter", "GenericAdapter"]
 
 
 class SQLAdapter(ABC):

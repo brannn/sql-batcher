@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
-from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter, T
+from sql_batcher.adapters.base import AsyncSQLAdapter, SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
 
 
