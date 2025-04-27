@@ -96,10 +96,12 @@ def run_demo() -> None:
 
     # Test 1: Without insert merging
     print("\nTest 1: Without insert merging")
-    batcher = SQLBatcher(adapter=adapter, max_bytes=1_000_000, merge_inserts=False)
+    batcher = SQLBatcher(
+        adapter=adapter, max_bytes=1_000_000, merge_inserts=False, collector=collector
+    )
 
     start_time = time.time()
-    batcher.process_statements(statements, adapter.execute, collector)
+    batcher.process_statements(statements, adapter.execute)
     end_time = time.time()
 
     stats = collector.get_stats()
@@ -114,10 +116,12 @@ def run_demo() -> None:
     # Test 2: With insert merging
     print("\nTest 2: With insert merging")
     collector = QueryCollector()  # Reset collector
-    batcher = SQLBatcher(adapter=adapter, max_bytes=1_000_000, merge_inserts=True)
+    batcher = SQLBatcher(
+        adapter=adapter, max_bytes=1_000_000, merge_inserts=True, collector=collector
+    )
 
     start_time = time.time()
-    batcher.process_statements(statements, adapter.execute, collector)
+    batcher.process_statements(statements, adapter.execute)
     end_time = time.time()
 
     stats = collector.get_stats()
