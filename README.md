@@ -4,41 +4,40 @@
 [![PyPI Version](https://img.shields.io/pypi/v/sql-batcher.svg)](https://pypi.org/project/sql-batcher)
 [![License](https://img.shields.io/pypi/l/sql-batcher.svg)](https://github.com/sql-batcher/sql-batcher/blob/main/LICENSE)
 
-A Python library for batching SQL statements based on size limits, with optional INSERT statement merging to significantly reduce database calls and improve performance.
+A Python library for managing large volumes of SQL statements by batching them according to size limits. SQL Batcher helps handle database operations that exceed query size or memory constraints by grouping statements into appropriately sized batches.
 
-SQL Batcher helps manage large volumes of SQL statements when working with databases that have query size and memory constraints. It groups statements into appropriately sized batches and offers database-specific adapters to improve performance across different database systems.
+## What SQL Batcher Does
 
-## Features
+SQL Batcher provides:
+- Batching of SQL statements based on size limits
+- Support for multiple database systems (PostgreSQL, Snowflake, Trino, etc.)
+- Optional merging of compatible INSERT statements
+- Transaction management for batched operations
+- Query tracking and monitoring
 
-- 🚀 **High Performance**: Optimize database operations by batching multiple SQL statements
-- 🔄 **Insert Merging**: Intelligently combine INSERT statements to reduce database calls by up to 98%
-- 🧩 **Modularity**: Easily swap between different database adapters (Trino, Snowflake, Spark, etc.)
-- 📏 **Smart Sizing**: Automatic batch size adjustment based on column count 
-- 🔍 **Transparency**: Dry run mode to inspect generated SQL without execution
-- 📊 **Monitoring**: Collect and analyze batched queries
-- 🔗 **Extensibility**: Create custom adapters for any database system
-- 🛡️ **Type Safety**: Full type annotations for better IDE support
+## When to Use SQL Batcher
+
+Use SQL Batcher when:
+- You need to process large datasets in chunks
+- Your database has query size limits
+- You want to manage memory usage during large operations
+- You need to work with multiple database types
+- You want to track and monitor batched queries
+
+## How It Works
+
+1. **Query Collection**: SQL statements are collected and grouped
+2. **Size Calculation**: Each statement's size is calculated
+3. **Batching**: Statements are grouped into batches that fit within size limits
+4. **Execution**: Batches are executed in sequence
+5. **Transaction Management**: Batches can be executed within transactions
+6. **Error Handling**: Failed batches can be retried or rolled back
 
 ## Installation
 
 ```bash
 pip install sql-batcher
 ```
-
-## Development Setup
-
-### Git Hooks
-
-This repository includes git hooks to ensure code quality. To set up the hooks:
-
-```bash
-# Run the setup script
-./setup-hooks.sh
-```
-
-The hooks will:
-- Format code using black and isort before each commit
-- Automatically add formatted files to the commit
 
 ## Basic Usage
 
@@ -63,9 +62,44 @@ batcher = SQLBatcher(max_bytes=900_000)
 batcher.process_statements(statements, execute_fn)
 ```
 
+## Database Adapters
+
+SQL Batcher supports multiple database systems through adapters:
+
+```python
+from sql_batcher.adapters import PostgreSQLAdapter, SnowflakeAdapter, TrinoAdapter
+
+# PostgreSQL
+adapter = PostgreSQLAdapter(
+    host="localhost",
+    port=5432,
+    database="mydb",
+    user="user",
+    password="password"
+)
+
+# Snowflake
+adapter = SnowflakeAdapter(
+    account="your_account",
+    user="user",
+    password="password",
+    database="mydb",
+    schema="public"
+)
+
+# Trino
+adapter = TrinoAdapter(
+    host="localhost",
+    port=8080,
+    user="user",
+    catalog="hive",
+    schema="default"
+)
+```
+
 ## Insert Merging
 
-The library can optionally merge compatible INSERT statements to reduce the number of database calls:
+SQL Batcher can merge compatible INSERT statements to reduce the number of database calls:
 
 ```python
 # Enable insert merging
@@ -89,22 +123,17 @@ Will be merged into:
 INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com'), ('Bob', 'bob@example.com'), ('Charlie', 'charlie@example.com')
 ```
 
-This can significantly reduce the number of database calls, especially when processing large batches of inserts.
-
 ### Merging Conditions
 
 Statements will only be merged if they:
-
 1. Are INSERT statements with the same table name
 2. Have the same column specifications
 3. Don't exceed the `max_bytes` limit when merged
 4. Follow the `VALUES` syntax pattern
 
-Non-mergeable statements (like SELECT, UPDATE) will be processed normally.
-
 ## Query Tracking
 
-You can track executed queries using the `QueryCollector`:
+Track executed queries using the `QueryCollector`:
 
 ```python
 from sql_batcher import SQLBatcher
@@ -123,12 +152,20 @@ queries = collector.get_all()
 print(f"Executed {count} queries")
 ```
 
-## Examples
+## Development Setup
 
-See the `examples` directory for more detailed examples:
+### Git Hooks
 
-- `simple_merge_example.py`: Basic demonstration of merge functionality
-- `insert_merging_example.py`: PostgreSQL example with performance comparison
+This repository includes git hooks to ensure code quality. To set up the hooks:
+
+```bash
+# Run the setup script
+./setup-hooks.sh
+```
+
+The hooks will:
+- Format code using black and isort before each commit
+- Automatically add formatted files to the commit
 
 ## License
 
