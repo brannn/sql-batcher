@@ -26,8 +26,15 @@ def run_core_tests(options: List[str] = None) -> int:
     cmd = [
         "pytest",
         "tests/test_batcher.py",
-        "tests/test_adapters.py::TestSQLAdapter",
+        "tests/test_adapters.py",
         "tests/test_async_batcher.py",
+        "tests/test_async_batcher_context.py",
+        "tests/test_hook_manager.py",
+        "tests/test_plugins.py",
+        "tests/test_insert_merger.py",
+        "tests/test_query_collector.py",
+        "tests/test_retry_manager.py",
+        "-k", "not postgresql and not snowflake and not trino and not bigquery"
     ]
 
     if options:
