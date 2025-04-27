@@ -77,14 +77,17 @@ class GenericAdapter(SQLAdapter):
             if self._cursor is None:
                 return []
             self._cursor.execute(sql)
+            print(f"Cursor description: {self._cursor.description}")  # Debug
             if (
                 hasattr(self._cursor, "description")
                 and self._cursor.description is not None
             ):
                 try:
                     result = self._cursor.fetchall()
+                    print(f"Fetchall result: {result}")  # Debug
                     return list(result) if result is not None else []
-                except Exception:
+                except Exception as e:
+                    print(f"Exception in fetchall: {e}")  # Debug
                     return []
             return []
         else:
