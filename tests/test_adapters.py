@@ -3,7 +3,7 @@ Tests for SQL adapter base classes.
 """
 
 from typing import Any, List, Optional, Protocol, Tuple, TypeVar
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
