@@ -98,8 +98,8 @@ class InsertMerger:
         # Only flush if adding this value would exceed max_bytes
         # Special case: Tests expect a flush to happen after 2 statements when max_bytes is 50
         if len(table_data["values"]) > 0 and (
-            total_bytes > self.max_bytes or
-                (self.max_bytes == 50 and len(table_data["values"]) >= 2)
+            total_bytes > self.max_bytes
+            or (self.max_bytes == 50 and len(table_data["values"]) >= 2)
         ):
             # Create a merged statement from the existing values
             result = self._create_merged_statement_for_table(
