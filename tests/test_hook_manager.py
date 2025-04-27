@@ -1,7 +1,4 @@
-"""Tests for the HookManager class."""
-
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock
+"""Test hook manager."""
 
 import pytest
 

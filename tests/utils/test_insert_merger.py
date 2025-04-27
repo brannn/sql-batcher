@@ -385,3 +385,14 @@ class TestInsertMerger:
         assert all(
             batch_counts[i] >= batch_counts[i + 1] for i in range(len(batch_counts) - 1)
         )
+
+    def test_merge_insert_statements_with_different_tables(self):
+        """Test merging insert statements with different tables."""
+        merger = InsertMerger()
+        
+        # Add statements for different tables
+        merger.add_insert("INSERT INTO table1 (col1, col2) VALUES (1, 2)")
+        merger.add_insert("INSERT INTO table2 (col1, col2) VALUES (3, 4)")
+        
+        # Verify that statements for different tables are not merged
+        assert len(merger.get_merged_statements()) == 2

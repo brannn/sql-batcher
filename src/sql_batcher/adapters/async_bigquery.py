@@ -3,7 +3,7 @@
 This module provides an async adapter for Google BigQuery using google-cloud-bigquery.
 """
 
-from typing import Any, Awaitable, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from google.cloud import bigquery
 from google.cloud.bigquery import Client

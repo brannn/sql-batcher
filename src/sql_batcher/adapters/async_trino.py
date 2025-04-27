@@ -3,7 +3,7 @@
 This module provides an async adapter for Trino databases using trino-async.
 """
 
-from typing import Any, Awaitable, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import trino.async_client as trino
 

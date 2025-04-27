@@ -1,4 +1,4 @@
-"""Tests for the RetryManager class."""
+"""Test retry manager."""
 
 import asyncio
 from typing import Any, Callable

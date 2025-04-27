@@ -1,8 +1,4 @@
-"""Integration tests for async functionality.
-
-These tests require actual database connections and will only run when
-the corresponding database is available and configured via environment variables.
-"""
+"""Integration tests for async batcher."""
 
 import asyncio
 import os
@@ -16,6 +12,7 @@ from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
 from sql_batcher.adapters.async_snowflake import AsyncSnowflakeAdapter
 from sql_batcher.adapters.async_trino import AsyncTrinoAdapter
 from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
+from sql_batcher.async_batcher import AsyncBatcher
 
 
 # Skip tests if database is not available

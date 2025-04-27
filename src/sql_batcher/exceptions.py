@@ -128,3 +128,9 @@ class InsertMergerError(SQLBatcherError):
     """Raised when there is an error in the insert merger."""
 
     pass
+
+
+class PluginError(SQLBatcherError):
+    """Raised when there is an error in plugin operations."""
+
+    pass

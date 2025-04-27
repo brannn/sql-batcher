@@ -3,7 +3,7 @@
 This module provides an async adapter for Snowflake databases using snowflake-connector-python.
 """
 
-from typing import Any, Awaitable, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import snowflake.connector.async_connector as snowflake
 

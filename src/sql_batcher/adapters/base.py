@@ -5,7 +5,9 @@ This module provides abstract base classes for database adapters used by SQL Bat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, List, Optional, Sequence, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, TypeVar
+
+from sql_batcher.exceptions import AdapterConnectionError, AdapterExecutionError
 
 T = TypeVar("T")
 
