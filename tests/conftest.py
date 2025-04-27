@@ -265,4 +265,5 @@ def mock_db_connection() -> MagicMock:
     mock_cursor.fetchall.return_value = [
         (1, "Test")
     ]  # Ensure fetchall returns the expected result
+    mock_cursor.execute.return_value = None  # Ensure execute returns None
     return mock_connection
