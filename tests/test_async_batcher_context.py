@@ -16,17 +16,25 @@ class TestPlugin(Plugin):
 
     def __init__(self):
         """Initialize the test plugin."""
-        super().__init__()
         self.initialized = False
         self.cleaned_up = False
 
-    def initialize(self, context):
-        """Initialize the plugin."""
-        self.initialized = True
+    def get_name(self) -> str:
+        """Get the plugin name."""
+        return "test_plugin"
 
-    def cleanup(self, context):
-        """Clean up the plugin."""
-        self.cleaned_up = True
+    def get_hooks(self) -> dict[HookType, list[callable[[HookContext], None]]]:
+        """Get the hooks registered by this plugin."""
+        async def pre_batch_hook(context: HookContext) -> None:
+            self.initialized = True
+
+        async def post_batch_hook(context: HookContext) -> None:
+            self.cleaned_up = True
+
+        return {
+            HookType.PRE_BATCH: [pre_batch_hook],
+            HookType.POST_BATCH: [post_batch_hook],
+        }
 
 
 @pytest.fixture
@@ -57,9 +65,10 @@ def async_batcher(plugin_manager):
     return AsyncSQLBatcher(plugin_manager=plugin_manager)
 
 
-def test_context_manager_normal_flow(async_batcher, test_plugin):
+@pytest.mark.asyncio
+async def test_context_manager_normal_flow(async_batcher, test_plugin):
     """Test normal flow of context manager."""
-    with async_batcher:
+    async with async_batcher:
         assert test_plugin.initialized
         assert not test_plugin.cleaned_up
 
@@ -67,10 +76,11 @@ def test_context_manager_normal_flow(async_batcher, test_plugin):
     assert test_plugin.cleaned_up
 
 
-def test_context_manager_error_flow(async_batcher, test_plugin):
+@pytest.mark.asyncio
+async def test_context_manager_error_flow(async_batcher, test_plugin):
     """Test error flow of context manager."""
     with pytest.raises(Exception):
-        with async_batcher:
+        async with async_batcher:
             assert test_plugin.initialized
             assert not test_plugin.cleaned_up
             raise Exception("Test error")
