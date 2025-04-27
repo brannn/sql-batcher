@@ -266,4 +266,7 @@ def mock_db_connection() -> MagicMock:
         (1, "Test")
     ]  # Ensure fetchall returns the expected result
     mock_cursor.execute.return_value = None  # Ensure execute returns None
+    mock_cursor.fetchall.side_effect = lambda: [
+        (1, "Test")
+    ]  # Use side_effect to ensure consistent behavior
     return mock_connection
