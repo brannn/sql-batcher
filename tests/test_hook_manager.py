@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 import pytest
 
 from sql_batcher.hook_manager import HookManager
-from sql_batcher.hooks import HookContext, HookType, Plugin
+from sql_batcher.hooks.plugins import HookContext, HookType, Plugin
 
 
 class TestPlugin(Plugin):
