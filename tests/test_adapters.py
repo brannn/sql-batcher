@@ -3,11 +3,11 @@ Tests for SQL adapter base classes.
 """
 
 from typing import Any, List, Optional, Protocol, Tuple, TypeVar
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from sql_batcher.adapters.base import SQLAdapter
+from sql_batcher.adapters.base import SQLAdapter, AsyncSQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
 
 T = TypeVar("T")
@@ -37,6 +37,34 @@ class TestAdapter(Protocol):
         ...
 
     def rollback_transaction(self) -> None:
+        """Rollback a transaction."""
+        ...
+
+
+class TestAsyncAdapter(Protocol):
+    """Test async adapter protocol."""
+
+    async def execute(self, sql: str) -> List[Tuple[Any, ...]]:
+        """Execute a SQL statement."""
+        ...
+
+    async def get_max_query_size(self) -> int:
+        """Get maximum query size."""
+        ...
+
+    async def close(self) -> None:
+        """Close the connection."""
+        ...
+
+    async def begin_transaction(self) -> None:
+        """Begin a transaction."""
+        ...
+
+    async def commit_transaction(self) -> None:
+        """Commit a transaction."""
+        ...
+
+    async def rollback_transaction(self) -> None:
         """Rollback a transaction."""
         ...
 
@@ -82,6 +110,53 @@ class TestAdapterImpl(SQLAdapter):
     def rollback_transaction(self) -> None:
         """Rollback transaction."""
         self.connection.rollback()
+
+    def get_executed_statements(self) -> List[str]:
+        """Get list of executed SQL statements."""
+        return self._executed_statements
+
+
+class TestAsyncAdapterImpl(AsyncSQLAdapter):
+    """Test implementation of AsyncSQLAdapter."""
+
+    def __init__(self, max_query_size: Optional[int] = None):
+        """Initialize test adapter."""
+        self.max_query_size = max_query_size or 500_000
+        self.cursor = AsyncMock()
+        self.connection = AsyncMock()
+        self.connection.cursor.return_value = self.cursor
+        self.closed = False
+        self._executed_statements: List[str] = []
+
+    async def get_max_query_size(self) -> int:
+        """Get maximum query size."""
+        return self.max_query_size
+
+    async def execute(self, sql: str) -> List[Tuple[Any, ...]]:
+        """Execute SQL statement."""
+        self._executed_statements.append(sql)
+        await self.cursor.execute(sql)
+        if self.cursor.description is not None:
+            return list(await self.cursor.fetchall())
+        return []
+
+    async def close(self) -> None:
+        """Close connection."""
+        self.closed = True
+        await self.cursor.close()
+        await self.connection.close()
+
+    async def begin_transaction(self) -> None:
+        """Begin transaction."""
+        await self.connection.begin()
+
+    async def commit_transaction(self) -> None:
+        """Commit transaction."""
+        await self.connection.commit()
+
+    async def rollback_transaction(self) -> None:
+        """Rollback transaction."""
+        await self.connection.rollback()
 
     def get_executed_statements(self) -> List[str]:
         """Get list of executed SQL statements."""
@@ -220,3 +295,60 @@ class TestGenericAdapter:
         assert self.connection.begin.call_count == 1
         assert self.cursor.execute.call_count == 1
         assert self.connection.commit.call_count == 1
+
+
+@pytest.mark.core
+class TestAsyncSQLAdapter:
+    """Test cases for abstract AsyncSQLAdapter class."""
+
+    def test_abstract_methods(self) -> None:
+        """Test that AsyncSQLAdapter requires implementing abstract methods."""
+        # Should not be able to instantiate the abstract class
+        with pytest.raises(TypeError):
+            AsyncSQLAdapter()  # type: ignore
+
+        # Create a minimal implementation
+        class MinimalAsyncAdapter(AsyncSQLAdapter):
+            async def execute(self, sql: str) -> List[Any]:
+                return []
+
+            async def get_max_query_size(self) -> int:
+                return 1000
+
+            async def close(self) -> None:
+                pass
+
+        # Should be able to instantiate the minimal implementation
+        adapter = MinimalAsyncAdapter()
+        assert adapter is not None
+
+
+@pytest.mark.asyncio
+class TestAsyncAdapterImpl:
+    """Test cases for TestAsyncAdapterImpl."""
+
+    @pytest.fixture(autouse=True)
+    async def setup_adapter(self) -> None:
+        """Set up test fixtures."""
+        self.adapter = TestAsyncAdapterImpl()
+        yield
+        await self.adapter.close()
+
+    async def test_execute(self) -> None:
+        """Test execute method."""
+        await self.adapter.execute("SELECT 1")
+        assert self.adapter.get_executed_statements() == ["SELECT 1"]
+
+    async def test_max_query_size(self) -> None:
+        """Test max query size."""
+        assert await self.adapter.get_max_query_size() == 500_000
+
+    async def test_transaction(self) -> None:
+        """Test transaction methods."""
+        await self.adapter.begin_transaction()
+        await self.adapter.execute("INSERT INTO test VALUES (1)")
+        await self.adapter.commit_transaction()
+
+        assert self.adapter.connection.begin.call_count == 1
+        assert self.adapter.cursor.execute.call_count == 1
+        assert self.adapter.connection.commit.call_count == 1
