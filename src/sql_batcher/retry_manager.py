@@ -1,26 +1,26 @@
-"""Retry manager for SQL Batcher.
+"""
+RetryManager: A tool for managing retries of operations.
 
-This module provides functionality to manage retries for failed operations.
+This module provides functionality to retry operations with configurable
+delays and timeouts.
 """
 
 import asyncio
 import logging
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional
 
 from sql_batcher.exceptions import RetryError
 
-T = TypeVar("T")
-
+logger = logging.getLogger(__name__)
 
 class RetryManager:
-    """Manages retry and timeout logic for SQL operations."""
+    """Manages retries of operations."""
 
     def __init__(
         self,
         max_retries: int = 3,
         retry_delay: float = 1.0,
         timeout: Optional[float] = None,
-        logger: Optional[logging.Logger] = None,
     ) -> None:
         """Initialize the retry manager.
 
@@ -28,12 +28,11 @@ class RetryManager:
             max_retries: Maximum number of retry attempts
             retry_delay: Delay between retries in seconds
             timeout: Operation timeout in seconds
-            logger: Optional logger for retry events
         """
         self._max_retries = max_retries
         self._retry_delay = retry_delay
         self._timeout = timeout
-        self._logger = logger or logging.getLogger(__name__)
+        self._logger = logger
 
     async def execute_with_retry(
         self,

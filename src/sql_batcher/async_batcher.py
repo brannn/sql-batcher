@@ -7,11 +7,19 @@ the main SQLBatcher class for batching SQL statements based on size limits.
 
 import re
 from typing import Any, Awaitable, Callable, Dict, List, Optional
+import asyncio
+import logging
 
 from sql_batcher.adapters.base import AsyncSQLAdapter
 from sql_batcher.hooks import Plugin, PluginManager
 from sql_batcher.insert_merger import InsertMerger
 from sql_batcher.query_collector import QueryCollector
+from sql_batcher.batch_manager import BatchManager
+from sql_batcher.exceptions import SQLBatcherError
+from sql_batcher.hook_manager import HookManager
+from sql_batcher.retry_manager import RetryManager
+
+logger = logging.getLogger(__name__)
 
 
 class SavepointContext:
@@ -74,26 +82,40 @@ class AsyncSQLBatcher:
     def __init__(
         self,
         adapter: AsyncSQLAdapter,
-        max_batch_size: int = 1000,
-        max_batch_bytes: int = 900_000,
+        max_bytes: int = 900_000,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        timeout: Optional[float] = None,
+        merge_inserts: bool = False,
     ) -> None:
         """Initialize the AsyncSQLBatcher.
 
         Args:
             adapter: The SQL adapter to use
-            max_batch_size: Maximum number of statements in a batch
-            max_batch_bytes: Maximum size of a batch in bytes
+            max_bytes: Maximum size in bytes for a batch
+            max_retries: Maximum number of retry attempts
+            retry_delay: Delay between retries in seconds
+            timeout: Operation timeout in seconds
+            merge_inserts: Whether to merge compatible INSERT statements
         """
         self._adapter = adapter
-        self.max_batch_size = max_batch_size
-        self.max_batch_bytes = max_batch_bytes
-        self.current_batch: List[str] = []
-        self.current_size = 0
+        self.batch_manager = BatchManager(max_bytes=max_bytes)
+        self.retry_manager = RetryManager(
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            timeout=timeout,
+        )
+        self.hook_manager = HookManager()
+        self.merge_inserts = merge_inserts
+        if merge_inserts:
+            self.insert_merger = InsertMerger(max_bytes=max_bytes)
+        else:
+            self.insert_merger = None
         self._collector = QueryCollector()
         self._plugin_manager = PluginManager()
 
         # Expose public attributes
-        self.max_bytes = 1_000_000  # Default to 1MB if not specified
+        self.max_bytes = max_bytes
         self.delimiter = self._collector.get_delimiter()
         self.dry_run = self._collector.is_dry_run()
         self.auto_adjust_for_columns = False
@@ -203,9 +225,7 @@ class AsyncSQLBatcher:
                 self.adjustment_factor = factor
 
                 # Logging for debugging
-                import logging
-
-                logging.debug(
+                logger.debug(
                     f"Column-based adjustment: detected {self._collector.get_column_count()} columns, "
                     f"reference is {self._collector.get_reference_column_count()}, "
                     f"adjustment factor is {self._collector.get_adjustment_factor():.2f}"
@@ -223,218 +243,109 @@ class AsyncSQLBatcher:
 
         return int(self.max_bytes * self.adjustment_factor)
 
-    def add_statement(self, statement: str) -> bool:
+    async def add_statement(self, statement: str) -> None:
         """Add a statement to the current batch.
 
         Args:
-            statement: The SQL statement to add.
-
-        Returns:
-            True if the statement should be flushed, False otherwise.
+            statement: SQL statement to add
         """
-        # Check if adding this statement would exceed the limits
-        statement_size = len(statement.encode("utf-8"))
-        new_size = self.current_size + statement_size
-        new_count = len(self.current_batch) + 1
+        if not statement:
+            return
 
-        # Check if we should flush before adding
-        should_flush = (
-            new_count >= self.max_batch_size or new_size >= self.max_batch_bytes
-        )
-
-        # Add the statement to the current batch
-        self.current_batch.append(statement)
-        self.current_size = new_size
-
-        return should_flush
-
-    def reset(self) -> None:
-        """Reset the current batch."""
-        self._collector.reset()
-        # Update public attributes
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
-
-    async def flush(
-        self,
-        execute_callback: Callable[[str], Awaitable[Any]],
-        query_collector: Optional[QueryCollector] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> List[str]:
-        """Flush the current batch of statements.
-
-        Args:
-            execute_callback: Callback function to execute each statement
-            query_collector: Optional QueryCollector for tracking
-            metadata: Optional metadata to pass to hooks
-
-        Returns:
-            List of processed statements
-        """
-        if not self.current_batch:
-            return []
-
-        # Only create a savepoint if we're not already in a savepoint context
-        savepoint_name = f"batch_{id(self)}"
-        if not hasattr(self, "_in_savepoint_context"):
-            await self._adapter.create_savepoint(savepoint_name)
-
-        try:
-            # Execute each statement in the batch
-            processed_statements = []
-            for statement in self.current_batch:
-                try:
-                    await execute_callback(statement)
-                    processed_statements.append(statement)
-                except Exception as e:
-                    # Only rollback and reset if it's not a retryable error
-                    from sql_batcher.exceptions import AdapterExecutionError
-
-                    if not isinstance(e, AdapterExecutionError):
-                        if not hasattr(self, "_in_savepoint_context"):
-                            await self._adapter.rollback_to_savepoint(savepoint_name)
-                        self.reset()
-                    raise e
-
-            # Release the savepoint
-            if not hasattr(self, "_in_savepoint_context"):
-                await self._adapter.release_savepoint(savepoint_name)
-
-            # Reset the batch
-            self.reset()
-
-            return processed_statements
-        except Exception as e:
-            # Only rollback and reset if it's not a retryable error
-            from sql_batcher.exceptions import AdapterExecutionError
-
-            if not isinstance(e, AdapterExecutionError):
-                if not hasattr(self, "_in_savepoint_context"):
-                    await self._adapter.rollback_to_savepoint(savepoint_name)
-                self.reset()
-            raise e
-
-    def _merge_insert_statements(self, statements: List[str]) -> List[str]:
-        """
-        Merge INSERT statements into a single statement where possible.
-
-        Args:
-            statements: List of SQL statements to merge
-
-        Returns:
-            List of merged SQL statements
-        """
-        merger = InsertMerger()
-        return merger.merge(statements)
+        if self.merge_inserts and statement.upper().strip().startswith("INSERT"):
+            merged = self.insert_merger.add_statement(statement)
+            if merged:
+                self.batch_manager.add_statement(merged)
+        else:
+            self.batch_manager.add_statement(statement)
 
     async def process_statements(
         self,
         statements: List[str],
-        execute_callback: Callable[[str], Awaitable[Any]],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> List[str]:
-        """Process a list of statements.
+        execute_callback: Callable[[str], None],
+    ) -> None:
+        """Process a list of SQL statements.
 
         Args:
             statements: List of SQL statements to process
-            execute_callback: Callback function to execute each statement
-            metadata: Optional metadata to pass to hooks
-
-        Returns:
-            List of processed statements
+            execute_callback: Callback to execute SQL statements
         """
-        query_collector = QueryCollector()
-        processed_statements: List[str] = []
-
         for statement in statements:
-            should_flush = self.add_statement(statement)
-            if should_flush:
-                processed = await self.flush(
-                    execute_callback, query_collector, metadata
-                )
-                processed_statements.extend(processed)
+            await self.add_statement(statement)
 
-        # Flush any remaining statements
-        if self.current_batch:
-            processed = await self.flush(execute_callback, query_collector, metadata)
-            processed_statements.extend(processed)
-
-        return processed_statements
+        await self.process_batch(execute_callback)
 
     async def process_batch(
         self,
-        statements: List[str],
-        execute_func: Optional[Callable[[str], Awaitable[Any]]] = None,
-    ) -> List[Any]:
-        """
-        Process a batch of statements as a single unit.
+        execute_callback: Callable[[str], None],
+    ) -> None:
+        """Process the current batch of statements.
 
         Args:
-            statements: List of SQL statements to process
-            execute_func: Optional async function to execute SQL statements
-
-        Returns:
-            List of results from executing the statements
+            execute_callback: Callback to execute SQL statements
         """
-        if execute_func is None:
-            execute_func = self._adapter.execute
+        batch = self.batch_manager.get_batch()
+        if not batch:
+            return
 
-        results = []
-        for statement in statements:
-            result = await execute_func(statement)
-            results.append(result)
+        try:
+            # Execute pre-batch hooks
+            await self.hook_manager.execute_hooks(
+                "pre_batch",
+                {"statements": batch},
+            )
 
-        return results
+            # Execute the batch
+            await execute_callback("; ".join(batch))
+
+            # Execute post-batch hooks
+            await self.hook_manager.execute_hooks(
+                "post_batch",
+                {"statements": batch},
+            )
+        except Exception as e:
+            # Execute error hooks
+            await self.hook_manager.execute_hooks(
+                "on_error",
+                {"statements": batch, "error": e},
+            )
+            raise e
 
     async def process_stream(
         self,
-        statements: List[str],
-        execute_func: Optional[Callable[[str], Awaitable[Any]]] = None,
-    ) -> List[Any]:
-        """
-        Process statements in a streaming fashion.
+        statement_stream: List[str],
+        execute_callback: Callable[[str], None],
+        chunk_size: int = 1000,
+    ) -> None:
+        """Process a stream of SQL statements.
 
         Args:
-            statements: List of SQL statements to process
-            execute_func: Optional async function to execute SQL statements
-
-        Returns:
-            List of results from executing the statements
+            statement_stream: Stream of SQL statements
+            execute_callback: Callback to execute SQL statements
+            chunk_size: Number of statements to process at once
         """
-        if execute_func is None:
-            execute_func = self._adapter.execute
-
-        results = []
-        for statement in statements:
-            result = await execute_func(statement)
-            results.append(result)
-
-        return results
+        for i in range(0, len(statement_stream), chunk_size):
+            chunk = statement_stream[i:i + chunk_size]
+            await self.process_statements(chunk, execute_callback)
 
     async def process_chunk(
         self,
-        statements: List[str],
-        execute_func: Optional[Callable[[str], Awaitable[Any]]] = None,
-    ) -> List[Any]:
-        """
-        Process statements in chunks.
+        chunk: List[str],
+        execute_callback: Callable[[str], None],
+    ) -> None:
+        """Process a chunk of SQL statements.
 
         Args:
-            statements: List of SQL statements to process
-            execute_func: Optional async function to execute SQL statements
-
-        Returns:
-            List of results from executing the statements
+            chunk: Chunk of SQL statements
+            execute_callback: Callback to execute SQL statements
         """
-        if execute_func is None:
-            execute_func = self._adapter.execute
+        await self.process_statements(chunk, execute_callback)
 
-        results = []
-        for statement in statements:
-            result = await execute_func(statement)
-            results.append(result)
-
-        return results
+    async def reset(self) -> None:
+        """Reset the batcher state."""
+        self.batch_manager.reset()
+        if self.insert_merger:
+            self.insert_merger = InsertMerger(max_bytes=self.batch_manager.max_bytes)
 
     async def __aenter__(self) -> "AsyncSQLBatcher":
         """Enter the async context."""
@@ -451,6 +362,7 @@ class AsyncSQLBatcher:
         """
         if exc_type is not None:
             await self._adapter.rollback_transaction()
+            await self.reset()
         else:
             await self._adapter.commit_transaction()
 
@@ -488,5 +400,5 @@ class AsyncSQLBatcher:
             A savepoint context manager.
         """
         if name is None:
-            name = f"sp_{id(self)}_{int(time.time())}"
+            name = f"sp_{id(self)}_{int(asyncio.get_event_loop().time())}"
         return SavepointContext(self, name)

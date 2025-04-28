@@ -1,58 +1,25 @@
-"""Batch manager for SQL Batcher.
+"""
+BatchManager: A tool for managing SQL statement batches.
 
-This module handles batch sizing, merging, and column-aware logic for SQL statements.
+This module provides functionality to manage batches of SQL statements
+for efficient processing.
 """
 
-from typing import Any, Dict, List, Optional
-
-from sql_batcher.collectors.query_collector import QueryCollector
-from sql_batcher.utils.insert_merger import InsertMerger
-
+from typing import List, Optional
 
 class BatchManager:
-    """Manages batch operations for SQL statements."""
+    """Manages batches of SQL statements."""
 
-    def __init__(
-        self,
-        max_bytes: Optional[int] = None,
-        batch_mode: bool = True,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, max_bytes: int = 900_000) -> None:
         """Initialize the batch manager.
 
         Args:
-            max_bytes: Maximum batch size in bytes
-            batch_mode: Whether to operate in batch mode
-            **kwargs: Additional configuration options
+            max_bytes: Maximum size in bytes for a batch
         """
-        self._max_bytes = max_bytes or 1_000_000  # Default to 1MB if not specified
-        self._batch_mode = batch_mode
-        self._collector = QueryCollector(**kwargs)
-        self._merger = InsertMerger()
-
-        # Expose public attributes
-        self.max_bytes = self._max_bytes
-        self.delimiter = self._collector.get_delimiter()
-        self.dry_run = self._collector.is_dry_run()
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
-        self.auto_adjust_for_columns = kwargs.get("auto_adjust_for_columns", False)
-        self.reference_column_count = self._collector.get_reference_column_count()
-        self.min_adjustment_factor = self._collector.get_min_adjustment_factor()
-        self.max_adjustment_factor = self._collector.get_max_adjustment_factor()
-        self.column_count = self._collector.get_column_count()
-        self.adjustment_factor = self._collector.get_adjustment_factor()
-
-    def get_adjusted_max_bytes(self) -> int:
-        """Get the max_bytes value adjusted for column count.
-
-        Returns:
-            Adjusted max_bytes value
-        """
-        if not self._batch_mode or self._collector.get_adjustment_factor() == 1.0:
-            return self._max_bytes
-
-        return int(self._max_bytes * self._collector.get_adjustment_factor())
+        self.max_bytes = max_bytes
+        self.current_batch: List[str] = []
+        self.current_size = 0
+        self.adjustment_factor = 1.0
 
     def add_statement(self, statement: str) -> bool:
         """Add a statement to the current batch.
@@ -63,56 +30,42 @@ class BatchManager:
         Returns:
             True if the batch should be flushed, False otherwise
         """
-        # Ensure statement ends with delimiter
-        if not statement.strip().endswith(self._collector.get_delimiter()):
-            statement = statement.strip() + self._collector.get_delimiter()
+        if not statement:
+            return False
 
-        # Add statement to batch
-        self._collector.collect(statement)
+        # Check if adding this statement would exceed the limit
+        statement_size = len(statement.encode())
+        new_size = self.current_size + statement_size
 
-        # Update size
-        statement_size = len(statement.encode("utf-8"))
-        self._collector.update_current_size(statement_size)
+        if new_size > self.max_bytes:
+            return True
 
-        # Update public attributes
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
+        # Add the statement to the current batch
+        self.current_batch.append(statement)
+        self.current_size = new_size
+        return False
 
-        # Get adjusted max_bytes for comparison
-        adjusted_max_bytes = self.get_adjusted_max_bytes()
+    def get_batch(self) -> List[str]:
+        """Get the current batch of statements.
 
-        # Check if batch should be flushed
-        return self._collector.get_current_size() >= adjusted_max_bytes
+        Returns:
+            List of statements in the current batch
+        """
+        return self.current_batch.copy()
 
     def reset(self) -> None:
-        """Reset the current batch."""
-        self._collector.reset()
-        # Update public attributes
-        self.current_batch = self._collector.get_batch()
-        self.current_size = self._collector.get_current_size()
+        """Reset the batch manager state."""
+        self.current_batch = []
+        self.current_size = 0
 
-    def merge_insert_statements(self, statements: List[str]) -> List[str]:
-        """Merge INSERT statements into a single statement where possible.
+    def adjust_for_columns(self, column_count: int, reference_count: int) -> None:
+        """Adjust batch size based on column count.
 
         Args:
-            statements: List of SQL statements to merge
-
-        Returns:
-            List of merged SQL statements
+            column_count: Number of columns in the current statement
+            reference_count: Reference number of columns
         """
-        return self._merger.merge(statements)
-
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get current batch metadata.
-
-        Returns:
-            Dictionary of batch metadata
-        """
-        return {
-            "batch_size": len(self.current_batch),
-            "current_size": self.current_size,
-            "max_bytes": self.max_bytes,
-            "adjusted_max_bytes": self.get_adjusted_max_bytes(),
-            "column_count": self.column_count,
-            "adjustment_factor": self.adjustment_factor,
-        }
+        if column_count > reference_count:
+            self.adjustment_factor = reference_count / column_count
+        else:
+            self.adjustment_factor = 1.0

@@ -1,7 +1,6 @@
 """Plugin system for SQL Batcher.
 
-This module provides a plugin system for extending SQL Batcher functionality
-through hooks and custom processors.
+This module provides functionality for plugins and hooks in the SQL Batcher system.
 """
 
 from abc import ABC, abstractmethod
@@ -9,97 +8,144 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 
+from sql_batcher.exceptions import InsertMergerError
+
 
 class HookType(Enum):
-    """Types of hooks available in the plugin system."""
+    """Hook types for plugins.
+    
+    These hooks allow plugins to intercept and modify behavior at key points
+    in the SQL batching process.
+    """
 
-    PRE_BATCH = auto()
-    POST_BATCH = auto()
-    PRE_EXECUTE = auto()
-    POST_EXECUTE = auto()
-    ON_ERROR = auto()
+    PRE_BATCH = "pre_batch"  # Called before processing a batch of statements
+    POST_BATCH = "post_batch"  # Called after processing a batch of statements
+    PRE_EXECUTE = "pre_execute"  # Called before executing SQL statements
+    POST_EXECUTE = "post_execute"  # Called after executing SQL statements
+    ON_ERROR = "on_error"  # Called when an error occurs during processing
 
 
-@dataclass
 class HookContext:
-    """Context information passed to hooks."""
+    """Context object passed to hooks."""
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize the context with the given data."""
+        self._data = kwargs
+        # Set default attributes
+        self.statements: List[str] = kwargs.get('statements', [])
+        self.metadata: Dict[str, Any] = kwargs.get('metadata', {})
+        self.error: Optional[Exception] = kwargs.get('error')
+        self.hook_type: Optional[HookType] = kwargs.get('hook_type')
 
-    hook_type: HookType
-    statements: List[str]
-    metadata: Dict[str, Any]
-    error: Optional[Exception] = None
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a value from the context."""
+        return self._data.get(key, default)
+
+    def set(self, key: str, value: Any) -> None:
+        """Set a value in the context."""
+        self._data[key] = value
+        if hasattr(self, key):
+            setattr(self, key, value)
 
 
 T = TypeVar("T")
 
 
 class Plugin(ABC):
-    """Base class for sql-batcher plugins."""
+    """Base class for plugins."""
+    def __init__(self, name: str) -> None:
+        """Initialize the plugin.
+        
+        Args:
+            name: Name of the plugin
+        """
+        self.name = name
+        self._hooks: Dict[HookType, List[Callable[[HookContext], Any]]] = {}
 
-    @abstractmethod
     def get_name(self) -> str:
         """Get the plugin name."""
+        return self.name
 
-    @abstractmethod
-    def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
-        """Get the hooks registered by this plugin."""
+    def get_hooks(self, hook_type: Optional[HookType] = None) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
+        """Get the plugin's hooks.
+        
+        Args:
+            hook_type: Optional hook type to filter by
+            
+        Returns:
+            Dictionary of hook types to hook functions
+        """
+        if hook_type is None:
+            return self._hooks
+        return {hook_type: self._hooks.get(hook_type, [])}
+
+    def register_hook(self, hook_type: HookType, hook: Callable[[HookContext], Any]) -> None:
+        """Register a hook.
+        
+        Args:
+            hook_type: Type of hook to register
+            hook: Hook function to register
+        """
+        if hook_type not in self._hooks:
+            self._hooks[hook_type] = []
+        self._hooks[hook_type].append(hook)
+
+    def clear_hooks(self) -> None:
+        """Clear all registered hooks."""
+        self._hooks.clear()
 
 
 class PluginManager:
-    """Manages plugins and their hooks."""
-
+    """Manager for plugins."""
     def __init__(self) -> None:
         """Initialize the plugin manager."""
-        self._plugins: List[Plugin] = []
-        self._hooks: Dict[HookType, List[Callable[[HookContext], Any]]] = {
-            hook_type: [] for hook_type in HookType
-        }
+        self._plugins: Dict[str, Plugin] = {}
+        self._hooks: Dict[HookType, List[Callable[[HookContext], Any]]] = {}
 
     def register_plugin(self, plugin: Plugin) -> None:
         """Register a plugin.
-
+        
         Args:
-            plugin: The plugin to register
+            plugin: Plugin to register
         """
-        self._plugins.append(plugin)
-        for hook_type, hooks in plugin.get_hooks().items():
-            self._hooks[hook_type].extend(hooks)
+        if plugin.get_name() in self._plugins:
+            raise InsertMergerError(f"Plugin {plugin.get_name()} already registered")
+        self._plugins[plugin.get_name()] = plugin
+        self._update_hooks()
 
-    def unregister_plugin(self, plugin_name: str) -> None:
-        """Unregister a plugin by name.
-
+    def unregister_plugin(self, name: str) -> None:
+        """Unregister a plugin.
+        
         Args:
-            plugin_name: Name of the plugin to unregister
+            name: Name of plugin to unregister
         """
-        for plugin in self._plugins[:]:
-            if plugin.get_name() == plugin_name:
-                self._plugins.remove(plugin)
-                # Remove plugin's hooks
-                for hook_type in HookType:
-                    self._hooks[hook_type] = [
-                        hook
-                        for hook in self._hooks[hook_type]
-                        if hook not in plugin.get_hooks()[hook_type]
-                    ]
+        if name not in self._plugins:
+            raise InsertMergerError(f"Plugin {name} not registered")
+        del self._plugins[name]
+        self._update_hooks()
 
     def get_plugins(self) -> List[Plugin]:
-        """Get all registered plugins.
-
-        Returns:
-            List of registered plugins
-        """
-        return self._plugins.copy()
+        """Get all registered plugins."""
+        return list(self._plugins.values())
 
     def get_hooks(self, hook_type: HookType) -> List[Callable[[HookContext], Any]]:
         """Get hooks of a specific type.
-
+        
         Args:
             hook_type: Type of hooks to get
-
+            
         Returns:
-            List of hooks of the specified type
+            List of hook functions
         """
-        return self._hooks[hook_type].copy()
+        return self._hooks.get(hook_type, [])
+
+    def _update_hooks(self) -> None:
+        """Update the hook registry."""
+        self._hooks.clear()
+        for plugin in self._plugins.values():
+            for hook_type, hooks in plugin.get_hooks().items():
+                if hook_type not in self._hooks:
+                    self._hooks[hook_type] = []
+                self._hooks[hook_type].extend(hooks)
 
     async def execute_hooks(
         self,
@@ -107,17 +153,14 @@ class PluginManager:
         statements: List[str],
         metadata: Optional[Dict[str, Any]] = None,
         error: Optional[Exception] = None,
-    ) -> List[Any]:
+    ) -> None:
         """Execute hooks of a specific type.
-
+        
         Args:
             hook_type: Type of hooks to execute
             statements: SQL statements being processed
             metadata: Optional metadata to pass to hooks
             error: Optional error that occurred
-
-        Returns:
-            List of results from hook execution
         """
         context = HookContext(
             hook_type=hook_type,
@@ -126,16 +169,15 @@ class PluginManager:
             error=error,
         )
 
-        results = []
-        for hook in self._hooks[hook_type]:
+        for hook in self.get_hooks(hook_type):
             try:
-                result = await hook(context)
-                results.append(result)
+                await hook(context)
             except Exception as e:
-                # Log hook execution error but continue with other hooks
-                print(f"Error executing hook {hook.__name__}: {e}")
-
-        return results
+                # If it's an error hook, don't re-raise
+                if hook_type == HookType.ON_ERROR:
+                    continue
+                # For other hooks, raise the error
+                raise e
 
 
 class SQLPreprocessor(Plugin):
@@ -147,11 +189,8 @@ class SQLPreprocessor(Plugin):
         Args:
             preprocess_func: Function to preprocess SQL statements
         """
+        super().__init__("sql_preprocessor")
         self._preprocess_func = preprocess_func
-
-    def get_name(self) -> str:
-        """Get the plugin name."""
-        return "sql_preprocessor"
 
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
@@ -177,11 +216,8 @@ class MetricsCollector(Plugin):
 
     def __init__(self) -> None:
         """Initialize the metrics collector."""
+        super().__init__("metrics_collector")
         self._metrics: Dict[str, Any] = {}
-
-    def get_name(self) -> str:
-        """Get the plugin name."""
-        return "metrics_collector"
 
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""
@@ -226,11 +262,8 @@ class QueryLogger(Plugin):
         Args:
             log_func: Function to log queries
         """
+        super().__init__("query_logger")
         self._log_func = log_func
-
-    def get_name(self) -> str:
-        """Get the plugin name."""
-        return "query_logger"
 
     def get_hooks(self) -> Dict[HookType, List[Callable[[HookContext], Any]]]:
         """Get the hooks registered by this plugin."""

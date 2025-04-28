@@ -27,6 +27,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-xdist",
+    "hypothesis",
 ]
 postgresql = [
     "psycopg2-binary",

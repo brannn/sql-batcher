@@ -6,6 +6,8 @@ This module provides functionality to collect and manage SQL statements for batc
 
 from typing import Any, Dict, List, Optional
 
+from sql_batcher.insert_merger import InsertMerger
+
 
 class QueryCollector:
     """
@@ -24,6 +26,7 @@ class QueryCollector:
         reference_column_count: int = 10,
         min_adjustment_factor: float = 0.5,
         max_adjustment_factor: float = 2.0,
+        merge_inserts: bool = False,
     ) -> None:
         """Initialize the query collector.
 
@@ -34,6 +37,7 @@ class QueryCollector:
             reference_column_count: Reference column count for adjustment
             min_adjustment_factor: Minimum adjustment factor
             max_adjustment_factor: Maximum adjustment factor
+            merge_inserts: Whether to merge compatible INSERT statements
         """
         self._delimiter = delimiter
         self._dry_run = dry_run
@@ -46,6 +50,8 @@ class QueryCollector:
         self._column_count: Optional[int] = None
         self._adjustment_factor = 1.0
         self._metadata: Dict[str, Any] = {}
+        self._merge_inserts = merge_inserts
+        self._insert_merger = InsertMerger() if merge_inserts else None
 
     def get_delimiter(self) -> str:
         """Get the SQL statement delimiter.
@@ -69,6 +75,10 @@ class QueryCollector:
         Returns:
             List of SQL statements in the current batch
         """
+        if self._merge_inserts and self._insert_merger:
+            merged = self._insert_merger.flush_all()
+            if merged:
+                self._batch = merged
         return self._batch
 
     def get_current_size(self) -> int:
@@ -144,7 +154,15 @@ class QueryCollector:
             statement: SQL statement to add
             metadata: Optional metadata to associate with the statement
         """
-        self._batch.append(statement)
+        if self._merge_inserts and self._insert_merger and statement.strip().upper().startswith("INSERT"):
+            merged = self._insert_merger.add_statement(statement)
+            if merged:
+                self._batch = [merged]
+            else:
+                self._batch.append(statement)
+        else:
+            self._batch.append(statement)
+            
         if metadata:
             self.update_metadata(metadata)
 
@@ -172,11 +190,23 @@ class QueryCollector:
         """
         return self._metadata
 
+    def flush(self) -> List[str]:
+        """Flush all remaining queries.
+
+        Returns:
+            List of remaining SQL statements
+        """
+        batch = self.get_batch()
+        self.reset()
+        return batch
+
     def reset(self) -> None:
         """Reset the collector state."""
         self._batch = []
         self._current_size = 0
         self._metadata = {}
+        if self._insert_merger:
+            self._insert_merger.current_batch = []
 
 
 class ListQueryCollector(QueryCollector):
