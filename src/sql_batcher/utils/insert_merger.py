@@ -75,10 +75,35 @@ class InsertMerger:
         if not normalized.upper().startswith("INSERT INTO"):
             raise InsertMergerError("Only INSERT statements are supported")
 
-        # Check for balanced parentheses
-        open_count = sql.count('(')
-        close_count = sql.count(')')
-        if open_count != close_count:
+        # Check for balanced parentheses and quotes
+        paren_stack = []
+        in_quote = None
+        in_json = False
+        json_level = 0
+        
+        for i, char in enumerate(sql):
+            # Handle quotes
+            if char in '`"\'' and (not in_quote or char == in_quote):
+                in_quote = None if in_quote else char
+                continue
+                
+            if not in_quote:
+                if char == '{':
+                    in_json = True
+                    json_level += 1
+                elif char == '}':
+                    json_level -= 1
+                    if json_level == 0:
+                        in_json = False
+                elif not in_json:
+                    if char == '(':
+                        paren_stack.append(i)
+                    elif char == ')':
+                        if not paren_stack:
+                            raise InsertMergerError("Unbalanced parentheses in SQL statement")
+                        paren_stack.pop()
+
+        if paren_stack:
             raise InsertMergerError("Unbalanced parentheses in SQL statement")
 
         # Check for VALUES clause
@@ -93,23 +118,21 @@ class InsertMerger:
                 raise InsertMergerError("Empty column list")
             
             # Check for invalid column names
-            for col in col_list:
-                if not col.strip('`"\'').replace('_', '').isalnum():
-                    raise InsertMergerError(f"Invalid column name: {col}")
-
-            # Check for duplicate columns
             seen = set()
             for col in col_list:
-                normalized_col = col.strip('`"\'').upper()
-                if normalized_col in seen:
+                col_norm = col.strip('`"\'')
+                # Allow any non-empty column name that doesn't contain whitespace
+                if not col_norm or ' ' in col_norm:
+                    raise InsertMergerError(f"Invalid column name: {col}")
+                if col_norm.lower() in seen:
                     raise InsertMergerError(f"Duplicate column: {col}")
-                seen.add(normalized_col)
+                seen.add(col_norm.lower())
 
-    def _extract_table_name(self, sql: str) -> str:
+    def _extract_table_name(self, sql: Union[str, List[str]]) -> str:
         """Extract table name from SQL statement.
 
         Args:
-            sql: SQL statement to extract from.
+            sql: SQL statement to extract from. Can be a single string or list of strings.
 
         Returns:
             Table name.
@@ -117,80 +140,121 @@ class InsertMerger:
         Raises:
             InsertMergerError: If table name cannot be extracted.
         """
-        match = re.search(r"INSERT\s+INTO\s+([`\"']?[\w.]+[`\"']?)", sql, re.IGNORECASE)
+        if isinstance(sql, list):
+            if not sql:
+                raise InsertMergerError("Empty list of statements")
+            sql = sql[0]  # Use first statement for table name
+
+        # Match table name with optional quotes and schema
+        match = re.search(r"INSERT\s+INTO\s+(?:([`\"']?)([^`\"'\.\s]+)\1\.)?([`\"']?)([^`\"'\.\s]+)\3", sql, re.IGNORECASE)
         if not match:
             raise InsertMergerError("Could not extract table name")
-        return match.group(1).strip('`"\'')
+        
+        # Extract schema and table parts
+        schema_quote, schema, table_quote, table = match.groups()
+        
+        # If schema is present, include it in the result
+        if schema:
+            return f"{schema_quote}{schema}{schema_quote}.{table_quote}{table}{table_quote}"
+        return f"{table_quote}{table}{table_quote}"
 
-    def _extract_columns(self, sql: str) -> Optional[str]:
+    def _extract_columns(self, sql: Union[str, List[str]]) -> Optional[str]:
         """Extract column list from SQL statement.
 
         Args:
-            sql: SQL statement to extract from.
+            sql: SQL statement to extract from. Can be a single string or list of strings.
 
         Returns:
-            Column list or None if implicit.
+            Column list with parentheses if present, None otherwise.
         """
-        match = re.search(r"INSERT\s+INTO\s+[`\"']?[\w.]+[`\"']?\s*(\([^)]+\))?", sql, re.IGNORECASE)
-        if match and match.group(1):
-            return match.group(1)
+        if isinstance(sql, list):
+            if not sql:
+                return None
+            sql = sql[0]  # Use first statement for columns
+
+        # Find opening parenthesis after INSERT INTO table
+        table_end = re.search(r"INSERT\s+INTO\s+(?:[`\"']?[\w.]+[`\"']?\s*\.?\s*)*[`\"']?[\w.]+[`\"']?\s*", sql, re.IGNORECASE)
+        if not table_end:
+            return None
+        
+        pos = table_end.end()
+        if pos >= len(sql) or sql[pos] != '(':
+            return None
+
+        # Track parentheses and quotes
+        paren_count = 0
+        in_quote = None
+        start_pos = pos
+        
+        for i in range(pos, len(sql)):
+            char = sql[i]
+            
+            # Handle quotes
+            if char in '`"\'' and (not in_quote or char == in_quote):
+                in_quote = None if in_quote else char
+                continue
+                
+            if not in_quote:
+                if char == '(':
+                    paren_count += 1
+                elif char == ')':
+                    paren_count -= 1
+                    if paren_count == 0:
+                        # Found matching closing parenthesis
+                        return sql[start_pos:i+1].strip()
+        
         return None
 
-    def _extract_values(self, sql: str) -> str:
-        """Extract the VALUES clause from an SQL INSERT statement.
-        
+    def _extract_values(self, sql: Union[str, List[str]]) -> Optional[str]:
+        """Extract values from SQL statement.
+
         Args:
-            sql: SQL INSERT statement.
-            
+            sql: SQL statement to extract from. Can be a single string or list of strings.
+
         Returns:
-            The VALUES clause without the VALUES keyword.
-            
-        Raises:
-            InsertMergerError: If VALUES clause cannot be extracted.
+            Values clause with parentheses if present, None otherwise.
         """
-        # Find VALUES keyword (case-insensitive)
-        match = re.search(r'\bVALUES\s*\(', sql, re.IGNORECASE)
-        if not match:
-            raise InsertMergerError("No VALUES clause found in SQL statement")
-        
-        # Extract everything after VALUES
-        values_start = match.start()
-        values_str = sql[values_start:].strip()
-        
-        # Remove VALUES keyword
-        values_str = re.sub(r'\bVALUES\s*', '', values_str, flags=re.IGNORECASE)
-        
-        # Validate balanced parentheses and quotes
+        if isinstance(sql, list):
+            if not sql:
+                return None
+            sql = sql[0]  # Use first statement for values
+
+        # Find VALUES keyword
+        values_match = re.search(r"\bVALUES\s*", sql, re.IGNORECASE)
+        if not values_match:
+            return None
+            
+        pos = values_match.end()
+        if pos >= len(sql):
+            return None
+            
+        # Track parentheses and quotes
         paren_count = 0
-        in_quote = False
-        quote_char = None
-        in_json = False
-        json_level = 0
+        in_quote = None
+        start_pos = pos
+        found_values = False
         
-        for char in values_str:
-            if char in ["'", '"'] and (not quote_char or char == quote_char):
-                in_quote = not in_quote
-                quote_char = char if in_quote else None
-            elif not in_quote:
-                if char == '{':
-                    in_json = True
-                    json_level += 1
-                elif char == '}':
-                    json_level -= 1
-                    if json_level == 0:
-                        in_json = False
-                elif not in_json:
-                    if char == '(':
-                        paren_count += 1
-                    elif char == ')':
-                        paren_count -= 1
-                        if paren_count < 0:
-                            raise InsertMergerError("Unbalanced parentheses in VALUES clause")
+        for i in range(pos, len(sql)):
+            char = sql[i]
+            
+            # Handle quotes
+            if char in '`"\'' and (not in_quote or char == in_quote):
+                in_quote = None if in_quote else char
+                continue
+                
+            if not in_quote:
+                if char == '(':
+                    paren_count += 1
+                    found_values = True
+                elif char == ')':
+                    paren_count -= 1
+                    
+                # Stop at end of values or next SQL keyword
+                if (paren_count == 0 and found_values) or \
+                   (char.isalpha() and sql[i:].upper().startswith(('ON ', 'WHERE ', 'RETURNING '))):
+                    return sql[start_pos:i + (1 if paren_count == 0 else 0)].strip()
         
-        if paren_count != 0:
-            raise InsertMergerError("Unbalanced parentheses in VALUES clause")
-        
-        return values_str
+        return None if paren_count != 0 else sql[start_pos:].strip()
 
     def _are_compatible(self, stmt1: str, stmt2: str) -> bool:
         """Check if two statements are compatible for merging.
@@ -202,32 +266,36 @@ class InsertMerger:
         Returns:
             True if statements are compatible.
         """
-        # Check table names (case-insensitive)
-        if self._extract_table_name(stmt1).lower() != self._extract_table_name(stmt2).lower():
+        # Extract table names and normalize for case-insensitive comparison
+        table1 = self._extract_table_name(stmt1).lower()
+        table2 = self._extract_table_name(stmt2).lower()
+
+        # If tables are different, they can't be merged
+        if table1 != table2:
             return False
 
         cols1 = self._extract_columns(stmt1)
         cols2 = self._extract_columns(stmt2)
 
-        # If either statement has implicit columns, they're not compatible
+        # If either statement has implicit columns, they're compatible
         if not cols1 or not cols2:
-            return cols1 == cols2
+            return True
 
-        # Normalize column names for case-insensitive comparison
-        cols1_norm = [c.strip('`"\'').lower() for c in cols1.strip('()').split(',')]
-        cols2_norm = [c.strip('`"\'').lower() for c in cols2.strip('()').split(',')]
+        # Split and normalize column names
+        cols1_list = [c.strip('`"\'').lower() for c in cols1.strip('()').split(',')]
+        cols2_list = [c.strip('`"\'').lower() for c in cols2.strip('()').split(',')]
 
         # Check if columns match (order doesn't matter)
-        return set(cols1_norm) == set(cols2_norm)
+        return len(cols1_list) == len(cols2_list) and set(cols1_list) == set(cols2_list)
 
-    def merge(self, statements: List[str]) -> str:
+    def merge(self, statements: List[str]) -> List[str]:
         """Merge multiple SQL INSERT statements.
 
         Args:
             statements: List of SQL statements to merge.
 
         Returns:
-            Merged SQL statement.
+            List of merged SQL statements.
 
         Raises:
             InsertMergerError: If statements cannot be merged.
@@ -239,35 +307,61 @@ class InsertMerger:
         for stmt in statements:
             self._validate_sql(stmt)
 
-        # Check compatibility
-        base_stmt = statements[0]
-        for stmt in statements[1:]:
-            if not self._are_compatible(base_stmt, stmt):
-                raise InsertMergerError("Statements are not compatible for merging")
+        # Group statements by table and columns
+        table_groups = {}
+        for stmt in statements:
+            table = self._extract_table_name(stmt)
+            cols = self._extract_columns(stmt)
+            key = (table.lower(), cols.lower() if cols else None)
+            
+            # Find compatible group
+            found = False
+            for group_key in table_groups:
+                if self._are_compatible(table_groups[group_key][0], stmt):
+                    table_groups[group_key].append(stmt)
+                    found = True
+                    break
+            
+            if not found:
+                table_groups[key] = [stmt]
 
-        # Extract components from first statement
-        table = self._extract_table_name(base_stmt)
-        columns = self._extract_columns(base_stmt)
-        values = [self._extract_values(stmt) for stmt in statements]
+        # Merge each group
+        result = []
+        for stmts in table_groups.values():
+            # Extract components from first statement
+            base_stmt = stmts[0]
+            table = self._extract_table_name(base_stmt)
+            columns = self._extract_columns(base_stmt)
+            
+            # Extract and merge values
+            values = []
+            for stmt in stmts:
+                stmt_values = self._extract_values(stmt)
+                if stmt_values:
+                    values.append(stmt_values)
 
-        # Construct merged statement
-        result = f"INSERT INTO {table}"
-        if columns:
-            result += f" {columns}"
-        result += f" VALUES {', '.join(values)}"
+            # Construct merged statement
+            merged = f"INSERT INTO {table}"
+            if columns:
+                merged += f" {columns}"
+            merged += " VALUES " + self._merge_values(values)
 
-        # Check size limit
-        if len(result) > self.max_bytes:
-            # If single statement exceeds limit, return as is
-            if len(statements) == 1:
-                return statements[0]
-            # Otherwise, split into smaller batches
-            mid = len(statements) // 2
-            return self.merge(statements[:mid]) + "; " + self.merge(statements[mid:])
+            # Check size limit
+            if len(merged) > self.max_bytes:
+                # If single statement exceeds limit, return as is
+                if len(stmts) == 1:
+                    result.append(stmts[0])
+                    continue
+                # Otherwise, split into smaller batches
+                mid = len(stmts) // 2
+                result.extend(self.merge(stmts[:mid]))
+                result.extend(self.merge(stmts[mid:]))
+            else:
+                result.append(merged)
 
         return result
 
-    def add_statement(self, sql: str) -> Optional[str]:
+    def add_statement(self, sql: str) -> Optional[List[str]]:
         """Add a statement to the merger.
 
         Args:
@@ -303,17 +397,17 @@ class InsertMerger:
 
         return None
 
-    def flush_table(self, table: str) -> str:
+    def flush_table(self, table: str) -> List[str]:
         """Flush statements for a specific table.
 
         Args:
             table: Table name to flush.
 
         Returns:
-            Merged SQL statement.
+            List of merged SQL statements.
         """
         if table not in self.table_maps or not self.table_maps[table]['statements']:
-            return ""
+            return []
 
         batch = self.table_maps[table]
         result = self.merge(batch['statements'])
@@ -341,46 +435,45 @@ class InsertMerger:
         """
         return self.flush_all()
 
-    def _merge_values(self, statements: List[str]) -> str:
-        """Merge VALUES clauses from multiple SQL INSERT statements.
-        
+    def _merge_values(self, values_list: List[str]) -> str:
+        """Merge multiple VALUES clauses into a single clause.
+
         Args:
-            statements: List of SQL INSERT statements to merge.
-            
+            values_list: List of VALUES clauses to merge.
+
         Returns:
             Merged VALUES clause.
         """
-        if not statements:
+        if not values_list:
             return ""
-        
-        # Extract values from each statement
+
+        # Split values on top-level commas
         all_values = []
-        for stmt in statements:
-            values = self._extract_values(stmt)
-            # Split on top-level commas (not inside parentheses or quotes)
-            paren_level = 0
-            in_quote = False
-            quote_char = None
-            last_split = 0
-            value_parts = []
+        for values in values_list:
+            paren_count = 0
+            in_quote = None
+            current = []
+            start = 0
             
             for i, char in enumerate(values):
-                if char in ["'", '"'] and (not quote_char or char == quote_char):
-                    in_quote = not in_quote
-                    quote_char = char if in_quote else None
-                elif not in_quote:
+                # Handle quotes
+                if char in '`"\'' and (not in_quote or char == in_quote):
+                    in_quote = None if in_quote else char
+                    continue
+                    
+                if not in_quote:
                     if char == '(':
-                        paren_level += 1
+                        paren_count += 1
+                        if paren_count == 1:
+                            start = i
                     elif char == ')':
-                        paren_level -= 1
-                    elif char == ',' and paren_level == 0:
-                        value_parts.append(values[last_split:i].strip())
-                        last_split = i + 1
+                        paren_count -= 1
+                        if paren_count == 0:
+                            value = values[start:i+1].strip()
+                            if value:
+                                current.append(value)
             
-            if last_split < len(values):
-                value_parts.append(values[last_split:].strip())
-                
-            all_values.extend(value_parts)
-        
-        # Join values with commas
-        return ', '.join(v for v in all_values if v)
+            all_values.extend(current)
+            
+        # Combine all values with proper formatting
+        return ', '.join(all_values)
