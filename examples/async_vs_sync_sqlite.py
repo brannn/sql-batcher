@@ -56,37 +56,42 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
     def __init__(self, db_path: str = ":memory:"):
         """Initialize the async SQLite adapter."""
         self.db_path = db_path
-        self.connection = sqlite3.connect(db_path)
-        self.connection.row_factory = sqlite3.Row
+        # Don't create the connection here, create it in each thread
+        self.connection = None
 
     async def connect(self) -> None:
-        """Connect to the database (already done in __init__)."""
+        """Connect to the database."""
+        # Connection will be created in each thread as needed
         pass
 
     async def disconnect(self) -> None:
         """Disconnect from the database."""
-        pass
+        if self.connection:
+            self.connection.close()
+            self.connection = None
 
     async def execute(self, sql: str) -> List[Dict[str, Any]]:
         """Execute a SQL statement asynchronously and return results."""
-        # Simulate async execution by running in a separate thread
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._execute_sync, sql)
+        # Create a new connection for each execution to avoid thread issues
+        connection = sqlite3.connect(self.db_path)
+        connection.row_factory = sqlite3.Row
 
-    def _execute_sync(self, sql: str) -> List[Dict[str, Any]]:
-        """Execute a SQL statement synchronously (helper for execute)."""
-        cursor = self.connection.cursor()
         try:
+            cursor = connection.cursor()
             cursor.executescript(sql)
-            self.connection.commit()
+            connection.commit()
 
             # For SELECT statements, return the results
             if sql.strip().upper().startswith("SELECT"):
-                return [dict(row) for row in cursor.fetchall()]
+                rows = cursor.fetchall()
+                result = [dict(row) for row in rows]
+                return result
             return []
         except Exception as e:
             print(f"Error executing SQL: {e}")
             return []
+        finally:
+            connection.close()
 
     async def get_max_query_size(self) -> int:
         """Get the maximum query size in bytes."""
@@ -94,8 +99,8 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
 
     async def close(self) -> None:
         """Close the database connection."""
-        if self.connection:
-            self.connection.close()
+        # No persistent connection to close
+        pass
 
     async def begin_transaction(self) -> None:
         """Begin a transaction."""
