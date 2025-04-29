@@ -212,7 +212,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
 
             # Check if compatible statements were merged
             if "VALUES (1, 'Alice'), (3, 'Charlie')" in sql or "VALUES (3, 'Charlie'), (1, 'Alice')" in sql:
-                name_statements_merged = True
+                name_statements_merged = True  # noqa: F841
 
         # Verify at least some statements were executed
         self.assertTrue(has_id_name_1 or has_id_name_3, "No name statements were executed")

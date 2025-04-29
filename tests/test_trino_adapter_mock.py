@@ -60,7 +60,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter with a role
-        adapter = TrinoAdapter(
+        adapter = TrinoAdapter(  # noqa: F841
             host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema", role="mock-role"
         )
 
@@ -89,7 +89,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter with HTTP headers
-        adapter = TrinoAdapter(
+        adapter = TrinoAdapter(  # noqa: F841
             host="mock-host",
             port=8080,
             user="mock-user",

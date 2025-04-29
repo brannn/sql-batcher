@@ -29,7 +29,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "password": "mock-password",
             "database": "mock-database",
         }
-        adapter = PostgreSQLAdapter(connection_params=connection_params)
+        adapter = PostgreSQLAdapter(connection_params=connection_params)  # noqa: F841
 
         # Verify the adapter was initialized correctly
         # The adapter doesn't expose these attributes directly, but we can verify
