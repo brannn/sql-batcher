@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-
 from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
 
 
