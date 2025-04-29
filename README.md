@@ -122,6 +122,9 @@ pip install "sql-batcher[bigquery]"
 
 # For all supported databases
 pip install "sql-batcher[all]"
+
+# For development (includes testing and linting tools)
+pip install "sql-batcher[dev]"
 ```
 
 ## Quick Start
