@@ -213,10 +213,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Format your code (`./format_code.sh`)
-4. Commit your changes (`git commit -m 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+3. Install pre-commit hooks (`pip install pre-commit && pre-commit install`)
+4. Make your changes (the pre-commit hooks will automatically format your code)
+5. Commit your changes (`git commit -m 'Add some amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+The project uses pre-commit hooks to ensure code quality:
+- **black** for code formatting
+- **isort** for import sorting
+- **flake8** for code linting
+- **autoflake** for removing unused imports and variables
 
 ## License
 

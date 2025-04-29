@@ -68,12 +68,23 @@ All Python code is linted with:
 * [flake8](https://flake8.pycqa.org/en/latest/) for code style
 * [mypy](https://mypy.readthedocs.io/en/stable/) for type checking
 
-To ensure your code meets our style requirements, install the development dependencies and run the format and lint commands:
+To ensure your code meets our style requirements, we use pre-commit hooks that automatically format and lint your code when you commit changes:
 
 ```bash
-# Install development dependencies
-pip install -e ".[dev]"
+# Install pre-commit hooks
+pip install pre-commit
+pre-commit install
+```
 
+You can also run the hooks manually on all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Or run individual tools manually:
+
+```bash
 # Format the code
 black src/ tests/
 isort src/ tests/
@@ -109,7 +120,12 @@ To set up a development environment for SQL Batcher:
    ```
    pip install -e ".[dev,all]"
    ```
-5. Create a branch for your feature:
+5. Install pre-commit hooks:
+   ```
+   pip install pre-commit
+   pre-commit install
+   ```
+6. Create a branch for your feature:
    ```
    git checkout -b name-of-your-feature
    ```
