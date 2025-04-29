@@ -138,10 +138,17 @@ def main():
     )
 
     # Create an InsertMerger instance
-    merger = InsertMerger()
+    merger = InsertMerger(max_bytes=100_000)
 
     # Merge the statements manually
-    merged_statements = merger.merge_insert_statements(statements)
+    merged_statements = []
+    for statement in statements:
+        result = merger.add_statement(statement)
+        if result is not None:
+            merged_statements.append(result)
+
+    # Add any remaining statements
+    merged_statements.extend(merger.flush_all())
 
     start_time = time.time()
     batcher.process_statements(merged_statements, adapter.execute, collector)
