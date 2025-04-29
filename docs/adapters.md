@@ -1,6 +1,6 @@
 # Database Adapters
 
-SQL Batcher provides optimized adapters for popular databases, with Trino as our first-class query engine. These adapters handle database-specific features and optimizations.
+SQL Batcher provides optimized adapters for popular databases. These adapters handle database-specific features and optimizations.
 
 ## Why Use Database Adapters?
 
@@ -11,7 +11,7 @@ SQL Batcher provides optimized adapters for popular databases, with Trino as our
 
 ## Supported Adapters
 
-### Trino (First-Class Support)
+### Trino
 
 ```python
 from sql_batcher.adapters import TrinoAdapter
@@ -22,7 +22,7 @@ adapter = TrinoAdapter(
     user="trino",
     catalog="hive",
     schema="default",
-    role="admin",  # Trino role (sets 'x-trino-role' HTTP header)
+    role="admin",  # Trino role (sets 'x-trino-role' HTTP header as 'system=ROLE{role}')
     max_query_size=600_000  # 600KB limit to provide buffer for Trino's 1MB limit
 )
 ```
@@ -32,13 +32,16 @@ adapter = TrinoAdapter(
 ```python
 from sql_batcher.adapters import PostgreSQLAdapter
 
-adapter = PostgreSQLAdapter(
-    host="localhost",
-    port=5432,
-    user="postgres",
-    password="password",
-    database="mydb"
-)
+# Connection parameters can be provided as individual arguments
+connection_params = {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "password",
+    "database": "mydb"
+}
+
+adapter = PostgreSQLAdapter(connection_params=connection_params)
 ```
 
 ### Snowflake

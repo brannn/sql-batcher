@@ -33,10 +33,10 @@ async def main():
         user="trino",
         catalog="hive",
         schema="default",
-        role="admin",  # Trino role (sets 'x-trino-role' HTTP header)
+        role="admin",  # Trino role (sets 'x-trino-role' HTTP header as 'system=ROLE{role}')
         max_query_size=600_000  # 600KB limit to provide buffer for Trino's 1MB limit
     )
-    
+
     # Create async batcher
     batcher = AsyncSQLBatcher(
         adapter=adapter,
@@ -44,16 +44,16 @@ async def main():
         batch_mode=True,
         auto_adjust_for_columns=True  # Adjust batch size based on column count
     )
-    
+
     # Process statements asynchronously
     statements = [
         "INSERT INTO table1 VALUES (1, 'a')",
         "INSERT INTO table1 VALUES (2, 'b')",
         # ... many more statements
     ]
-    
+
     await batcher.process_statements(statements, adapter.execute)
-    
+
     # Close the connection
     await adapter.close()
 
@@ -75,13 +75,13 @@ async def main():
         port=8080,
         user="trino"
     )
-    
+
     # Use async context manager
     async with AsyncSQLBatcher(adapter=adapter) as batcher:
         # Add statements asynchronously
         await batcher.add_statement("INSERT INTO users (name) VALUES ('John')")
         await batcher.add_statement("INSERT INTO users (name) VALUES ('Jane')")
-        
+
         # Batches are automatically flushed on exit
         # Resources are automatically cleaned up
 
@@ -91,7 +91,7 @@ asyncio.run(main())
 
 ## Supported Async Adapters
 
-SQL Batcher provides async adapters for all supported databases, with Trino as our first-class query engine:
+SQL Batcher provides async adapters for all supported databases:
 
 ### Trino
 
@@ -104,7 +104,7 @@ adapter = AsyncTrinoAdapter(
     user="trino",
     catalog="hive",
     schema="default",
-    role="admin",  # Trino role (sets 'x-trino-role' HTTP header)
+    role="admin",  # Trino role (sets 'x-trino-role' HTTP header as 'system=ROLE{role}')
     max_query_size=600_000,  # 600KB limit to provide buffer for Trino's 1MB limit
     retry_attempts=3,  # With retry mechanism
     circuit_breaker_enabled=True  # With circuit breaker protection

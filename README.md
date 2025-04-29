@@ -40,7 +40,7 @@ Optimize database operations by combining compatible INSERT statements:
 
 ### [Database Adapters](docs/adapters.md)
 
-Optimized adapters for popular databases, with Trino as our first-class query engine:
+Optimized adapters for popular databases:
 
 - Database-specific optimizations
 - Consistent interface across databases
@@ -95,7 +95,7 @@ pip install sql-batcher
 With database-specific dependencies:
 
 ```bash
-# For Trino support (our first-class query engine)
+# For Trino support
 pip install "sql-batcher[trino]"
 
 # For PostgreSQL support
@@ -126,7 +126,7 @@ adapter = TrinoAdapter(
     user="trino",
     catalog="hive",
     schema="default",
-    role="admin",  # Trino role (sets 'x-trino-role' HTTP header)
+    role="admin",  # Trino role (sets 'x-trino-role' HTTP header as 'system=ROLE{role}')
     max_query_size=600_000  # 600KB limit to provide buffer for Trino's 1MB limit
 )
 
@@ -163,7 +163,7 @@ async def main():
         user="trino",
         catalog="hive",
         schema="default",
-        role="admin",  # Trino role (sets 'x-trino-role' HTTP header)
+        role="admin",  # Trino role (sets 'x-trino-role' HTTP header as 'system=ROLE{role}')
         max_query_size=600_000  # 600KB limit to provide buffer for Trino's 1MB limit
     )
 
@@ -203,6 +203,7 @@ For more detailed documentation, see the following pages:
 - [Savepoint Support](docs/savepoints.md) - Savepoint functionality
 - [Insert Merging](docs/insert_merging.md) - INSERT statement optimization
 - [Usage Examples](docs/examples.md) - Collection of usage examples
+- [Testing](docs/testing.md) - Testing guidelines and examples
 - [Code Style Guide](CODE_STYLE.md) - Code style guidelines
 
 ## Contributing
