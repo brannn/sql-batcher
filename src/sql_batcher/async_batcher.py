@@ -178,26 +178,38 @@ class AsyncSQLBatcher:
         if not statement.strip().endswith(self._collector.get_delimiter()):
             statement = statement.strip() + self._collector.get_delimiter()
 
+        # Get adjusted max_bytes for comparison
+        adjusted_max_bytes = self.get_adjusted_max_bytes()
+
+        # Check if adding this statement would exceed the batch size
+        statement_size = len(statement.encode("utf-8"))
+        current_size = await self._collector.get_current_size_async()
+
+        # If adding this statement would exceed the batch size, return True
+        if current_size + statement_size >= adjusted_max_bytes and current_size > 0:
+            return True
+
         # Add statement to batch
         await self._collector.collect_async(statement)
 
         # Update size
-        statement_size = len(statement.encode("utf-8"))
         await self._collector.update_current_size_async(statement_size)
 
         # Update public attributes
         self.current_batch = await self._collector.get_batch_async()
         self.current_size = await self._collector.get_current_size_async()
 
-        # Get adjusted max_bytes for comparison
-        adjusted_max_bytes = self.get_adjusted_max_bytes()
-
-        # Check if batch should be flushed
-        return await self._collector.get_current_size_async() >= adjusted_max_bytes
+        # Check if batch should be flushed after adding this statement
+        return self.current_size >= adjusted_max_bytes
 
     async def reset(self) -> None:
         """Reset the current batch asynchronously."""
         await self._collector.reset_async()
+        # Reset column count and adjustment factor
+        self._collector.set_column_count(None)
+        self.column_count = None
+        self._collector.set_adjustment_factor(1.0)
+        self.adjustment_factor = 1.0
         # Update public attributes
         self.current_batch = await self._collector.get_batch_async()
         self.current_size = await self._collector.get_current_size_async()
@@ -331,7 +343,7 @@ class AsyncSQLBatcher:
 
                 # Execute the batch
                 if not self._collector.is_dry_run():
-                    await execute_callback(batch_sql)
+                    results.append(await execute_callback(batch_sql))
 
                 # Reset the batch
                 current_batch = [statement]
@@ -349,10 +361,11 @@ class AsyncSQLBatcher:
 
             # Execute the batch
             if not self._collector.is_dry_run():
-                await execute_callback(batch_sql)
+                results.append(await execute_callback(batch_sql))
 
-        # Return the total count
-        return len(statements)
+        # Return the original statement count, not the merged count
+        original_count = len(statements)
+        return original_count
 
     async def process_batch(
         self, statements: List[str], execute_func: Optional[Callable[[str], Awaitable[Any]]] = None

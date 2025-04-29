@@ -305,18 +305,10 @@ class SQLBatcher:
             # Add statement to batch
             if self.add_statement(statement):
                 # Batch is full, flush it
-                if query_collector:
-                    query_collector.collect(statement, metadata=metadata)
-                else:
-                    self._collector.collect(statement, metadata=metadata)
                 results.append(self.flush(execute_callback, query_collector, metadata))
 
         # Flush any remaining statements
         if self._collector.get_current_size() > 0:
-            if query_collector:
-                query_collector.collect(statement, metadata=metadata)
-            else:
-                self._collector.collect(statement, metadata=metadata)
             results.append(self.flush(execute_callback, query_collector, metadata))
 
         # Return the total count

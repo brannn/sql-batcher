@@ -38,7 +38,7 @@ with SQLBatcher(adapter=adapter) as batcher:
     # Add statements
     batcher.add_statement("INSERT INTO users (name) VALUES ('John')")
     batcher.add_statement("INSERT INTO users (name) VALUES ('Jane')")
-    
+
     # Batches are automatically flushed on exit
 ```
 
@@ -56,15 +56,15 @@ async def main():
         port=8080,
         user="trino"
     )
-    
+
     # Use async context manager
     async with AsyncSQLBatcher(adapter=adapter) as batcher:
         # Add statements asynchronously
         await batcher.add_statement("INSERT INTO users (name) VALUES ('John')")
         await batcher.add_statement("INSERT INTO users (name) VALUES ('Jane')")
-        
+
         # Batches are automatically flushed on exit
-    
+
     # Close the connection
     await adapter.close()
 
@@ -81,13 +81,15 @@ from sql_batcher import SQLBatcher
 from sql_batcher.adapters import PostgreSQLAdapter
 
 # Create adapter
-adapter = PostgreSQLAdapter(
-    host="localhost",
-    port=5432,
-    user="postgres",
-    password="password",
-    database="mydb"
-)
+connection_params = {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "password",
+    "database": "mydb"
+}
+
+adapter = PostgreSQLAdapter(connection_params=connection_params)
 
 # Begin a transaction
 adapter.begin_transaction()
@@ -98,9 +100,9 @@ try:
         # Add statements
         batcher.add_statement("INSERT INTO users (name) VALUES ('John')")
         batcher.add_statement("INSERT INTO users (name) VALUES ('Jane')")
-        
+
         # Batches are automatically flushed on exit
-    
+
     # Commit the transaction
     adapter.commit_transaction()
 except Exception as e:
