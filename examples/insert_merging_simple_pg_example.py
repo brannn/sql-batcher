@@ -17,7 +17,6 @@ import time
 from typing import Dict, List
 
 import psycopg2
-from psycopg2.extensions import connection as PgConnection
 
 from sql_batcher import SQLBatcher
 
@@ -91,9 +90,7 @@ def main() -> None:
 
     try:
         # Connect to PostgreSQL
-        print(
-            f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}..."
-        )
+        print(f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}...")
         # Use dictionary unpacking to avoid LSP type issues
         conn = psycopg2.connect(
             host=conn_params["host"],
@@ -157,17 +154,11 @@ def main() -> None:
         print("\nResults:")
         print("=========")
         print(f"Number of statements: {num_statements}")
-        print(
-            f"Without merging: {count_no_merge} SQL calls, {row_count_no_merge} rows, {duration_no_merge:.6f} seconds"
-        )
-        print(
-            f"With merging: {count_with_merge} SQL calls, {row_count_with_merge} rows, {duration_with_merge:.6f} seconds"
-        )
+        print(f"Without merging: {count_no_merge} SQL calls, {row_count_no_merge} rows, {duration_no_merge:.6f} seconds")
+        print(f"With merging: {count_with_merge} SQL calls, {row_count_with_merge} rows, {duration_with_merge:.6f} seconds")
 
         if duration_no_merge > 0:
-            speedup = (
-                (duration_no_merge - duration_with_merge) / duration_no_merge * 100
-            )
+            speedup = (duration_no_merge - duration_with_merge) / duration_no_merge * 100
             print(f"Performance improvement: {speedup:.2f}%")
 
     except Exception as e:

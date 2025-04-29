@@ -9,7 +9,6 @@ This example demonstrates:
 """
 
 import os
-import re
 import sqlite3
 import time
 from typing import Any, List, Tuple
@@ -157,9 +156,7 @@ def run_demo() -> None:
     statements = generate_insert_statements(1000, start_id=1000)
 
     start_time = time.time()
-    batcher.process_statements(
-        statements, adapter.execute
-    )  # Process all statements at once
+    batcher.process_statements(statements, adapter.execute)  # Process all statements at once
     end_time = time.time()
 
     stats = collector.get_stats()
