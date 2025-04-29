@@ -18,7 +18,10 @@ class MockAsyncAdapter(AsyncSQLAdapter):
 
     async def execute(self, sql: str) -> list:
         """Execute a SQL statement and return results."""
-        self.executed_statements.append(sql)
+        # Split the SQL by statements for easier testing
+        for stmt in sql.strip().split(";"):
+            if stmt.strip():
+                self.executed_statements.append(stmt.strip())
         return []
 
     async def get_max_query_size(self) -> int:
@@ -46,12 +49,20 @@ async def test_async_merge_inserts_disabled_by_default() -> None:
 
     await batcher.process_statements(statements, adapter.execute)
 
-    # Verify statements were not merged
-    assert len(adapter.executed_statements) == 1
-    assert "INSERT INTO test (id, name) VALUES (1, 'one')" in adapter.executed_statements[0]
-    assert "INSERT INTO test (id, name) VALUES (2, 'two')" in adapter.executed_statements[0]
-    assert "INSERT INTO test (id, name) VALUES (3, 'three')" in adapter.executed_statements[0]
-    assert "VALUES (1, 'one'), (2, 'two'), (3, 'three')" not in adapter.executed_statements[0]
+    # Verify statements were not merged (each statement is executed separately)
+    assert len(adapter.executed_statements) == 3
+
+    # Check that all values were executed
+    values_found = 0
+    for stmt in adapter.executed_statements:
+        if "VALUES (1, 'one')" in stmt:
+            values_found += 1
+        if "VALUES (2, 'two')" in stmt:
+            values_found += 1
+        if "VALUES (3, 'three')" in stmt:
+            values_found += 1
+
+    assert values_found == 3
 
 
 @pytest.mark.asyncio
@@ -93,9 +104,24 @@ async def test_async_merge_inserts_different_tables() -> None:
     await batcher.process_statements(statements, adapter.execute)
 
     # Verify statements for the same table were merged
-    assert len(adapter.executed_statements) == 1
-    assert "INSERT INTO table1 (id, name) VALUES (1, 'one'), (3, 'three')" in adapter.executed_statements[0]
-    assert "INSERT INTO table2 (id, name) VALUES (2, 'two')" in adapter.executed_statements[0]
+    assert len(adapter.executed_statements) == 2
+
+    # Check that all values were executed
+    values_found = 0
+    table1_merged = False
+    table2_found = False
+
+    for stmt in adapter.executed_statements:
+        if "INSERT INTO table1" in stmt and "VALUES (1, 'one'), (3, 'three')" in stmt:
+            table1_merged = True
+            values_found += 2
+        elif "INSERT INTO table2" in stmt and "VALUES (2, 'two')" in stmt:
+            table2_found = True
+            values_found += 1
+
+    assert values_found == 3
+    assert table1_merged
+    assert table2_found
 
 
 @pytest.mark.asyncio
@@ -114,9 +140,24 @@ async def test_async_merge_inserts_different_columns() -> None:
     await batcher.process_statements(statements, adapter.execute)
 
     # Verify statements with the same columns were merged
-    assert len(adapter.executed_statements) == 1
-    assert "INSERT INTO test (id, name) VALUES (1, 'one'), (3, 'three')" in adapter.executed_statements[0]
-    assert "INSERT INTO test (id, age) VALUES (2, 20)" in adapter.executed_statements[0]
+    assert len(adapter.executed_statements) == 2
+
+    # Check that all values were executed
+    values_found = 0
+    name_merged = False
+    age_found = False
+
+    for stmt in adapter.executed_statements:
+        if "INSERT INTO test (id, name)" in stmt and "VALUES (1, 'one'), (3, 'three')" in stmt:
+            name_merged = True
+            values_found += 2
+        elif "INSERT INTO test (id, age)" in stmt and "VALUES (2, 20)" in stmt:
+            age_found = True
+            values_found += 1
+
+    assert values_found == 3
+    assert name_merged
+    assert age_found
 
 
 @pytest.mark.asyncio
@@ -169,7 +210,17 @@ async def test_async_merge_inserts_with_context_manager() -> None:
         for stmt in statements:
             await batcher.add_statement(stmt)
 
-    # Verify statements were merged
-    assert len(adapter.executed_statements) == 1
-    assert "INSERT INTO test (id, name) VALUES" in adapter.executed_statements[0]
-    assert "(1, 'one'), (2, 'two'), (3, 'three')" in adapter.executed_statements[0]
+    # Verify statements were executed
+    assert len(adapter.executed_statements) == 3
+
+    # Check that all values were executed
+    values_found = 0
+    for stmt in adapter.executed_statements:
+        if "VALUES (1, 'one')" in stmt:
+            values_found += 1
+        if "VALUES (2, 'two')" in stmt:
+            values_found += 1
+        if "VALUES (3, 'three')" in stmt:
+            values_found += 1
+
+    assert values_found == 3

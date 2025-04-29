@@ -41,7 +41,8 @@ class PostgreSQLAdapter(SQLAdapter):
 
     def __init__(
         self,
-        connection_params: Dict[str, Any],
+        connection_params: Optional[Dict[str, Any]] = None,
+        connection: Optional[Any] = None,
         isolation_level: Optional[str] = None,
         cursor_factory: Optional[Any] = None,
         application_name: Optional[str] = None,
@@ -54,13 +55,20 @@ class PostgreSQLAdapter(SQLAdapter):
                 "psycopg2-binary package is required for PostgreSQLAdapter. " "Install it with: pip install psycopg2-binary"
             )
 
-        # Add application name if provided
-        if application_name:
-            connection_params = connection_params.copy()
-            connection_params["application_name"] = application_name
+        # Use provided connection or create a new one
+        if connection is not None:
+            self._connection = connection
+        elif connection_params is not None:
+            # Add application name if provided
+            if application_name:
+                connection_params = connection_params.copy()
+                connection_params["application_name"] = application_name
 
-        # Create connection
-        self._connection = psycopg2.connect(**connection_params)
+            # Create connection
+            self._connection = psycopg2.connect(**connection_params)
+        else:
+            raise ValueError("Either connection_params or connection must be provided")
+
         self._max_query_size = max_query_size or 5_000_000
         self._fetch_results = fetch_results
 
