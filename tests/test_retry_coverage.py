@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import asyncio
-import pytest
 
 from sql_batcher.retry import RetryConfig, async_retry, retry
 

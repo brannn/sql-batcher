@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 # Patch the PSYCOPG2_AVAILABLE constant before importing the adapter
 with patch("sql_batcher.adapters.postgresql.PSYCOPG2_AVAILABLE", True):

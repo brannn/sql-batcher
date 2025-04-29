@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from sql_batcher.retry import RetryConfig, retry
 
