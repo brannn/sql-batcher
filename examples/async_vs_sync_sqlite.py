@@ -26,7 +26,7 @@ class SQLiteAdapter(SQLAdapter):
     def __init__(self, db_path: str = ":memory:"):
         """Initialize the SQLite adapter."""
         self.db_path = db_path
-        self.connection = sqlite3.connect(db_path)
+        self.connection = sqlite3.connect(db_path, uri=":memory:" not in db_path)
         self.connection.row_factory = sqlite3.Row
 
     def execute(self, sql: str) -> List[Dict[str, Any]]:
@@ -73,7 +73,7 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
     async def execute(self, sql: str) -> List[Dict[str, Any]]:
         """Execute a SQL statement asynchronously and return results."""
         # Create a new connection for each execution to avoid thread issues
-        connection = sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path, uri=":memory:" not in self.db_path)
         connection.row_factory = sqlite3.Row
 
         try:
@@ -138,11 +138,11 @@ def generate_insert_statements(count: int) -> List[str]:
 def run_sync_example(num_statements: int) -> float:
     """Run the synchronous example and return the execution time."""
     # Create adapter and batcher
-    adapter = SQLiteAdapter()
+    adapter = SQLiteAdapter("file:memdb1?mode=memory&cache=shared")
     batcher = SQLBatcher(adapter=adapter, max_bytes=100_000)
 
     # Create the table
-    adapter.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
+    adapter.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
 
     # Generate statements
     statements = generate_insert_statements(num_statements)
@@ -166,11 +166,11 @@ def run_sync_example(num_statements: int) -> float:
 async def run_async_example(num_statements: int) -> float:
     """Run the asynchronous example and return the execution time."""
     # Create adapter and batcher
-    adapter = AsyncSQLiteAdapter()
+    adapter = AsyncSQLiteAdapter("file:memdb1?mode=memory&cache=shared")
     batcher = AsyncSQLBatcher(adapter=adapter, max_bytes=100_000)
 
     # Create the table
-    await adapter.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
+    await adapter.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
 
     # Generate statements
     statements = generate_insert_statements(num_statements)
