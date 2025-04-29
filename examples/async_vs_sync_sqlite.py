@@ -63,6 +63,10 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
         """Connect to the database (already done in __init__)."""
         pass
 
+    async def disconnect(self) -> None:
+        """Disconnect from the database."""
+        pass
+
     async def execute(self, sql: str) -> List[Dict[str, Any]]:
         """Execute a SQL statement asynchronously and return results."""
         # Simulate async execution by running in a separate thread
@@ -72,13 +76,17 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
     def _execute_sync(self, sql: str) -> List[Dict[str, Any]]:
         """Execute a SQL statement synchronously (helper for execute)."""
         cursor = self.connection.cursor()
-        cursor.executescript(sql)
-        self.connection.commit()
+        try:
+            cursor.executescript(sql)
+            self.connection.commit()
 
-        # For SELECT statements, return the results
-        if sql.strip().upper().startswith("SELECT"):
-            return [dict(row) for row in cursor.fetchall()]
-        return []
+            # For SELECT statements, return the results
+            if sql.strip().upper().startswith("SELECT"):
+                return [dict(row) for row in cursor.fetchall()]
+            return []
+        except Exception as e:
+            print(f"Error executing SQL: {e}")
+            return []
 
     async def get_max_query_size(self) -> int:
         """Get the maximum query size in bytes."""
@@ -88,6 +96,30 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
         """Close the database connection."""
         if self.connection:
             self.connection.close()
+
+    async def begin_transaction(self) -> None:
+        """Begin a transaction."""
+        await self.execute("BEGIN TRANSACTION")
+
+    async def commit_transaction(self) -> None:
+        """Commit the current transaction."""
+        await self.execute("COMMIT")
+
+    async def rollback_transaction(self) -> None:
+        """Rollback the current transaction."""
+        await self.execute("ROLLBACK")
+
+    async def create_savepoint(self, name: str) -> None:
+        """Create a savepoint with the given name."""
+        await self.execute(f"SAVEPOINT {name}")
+
+    async def rollback_to_savepoint(self, name: str) -> None:
+        """Rollback to the savepoint with the given name."""
+        await self.execute(f"ROLLBACK TO SAVEPOINT {name}")
+
+    async def release_savepoint(self, name: str) -> None:
+        """Release the savepoint with the given name."""
+        await self.execute(f"RELEASE SAVEPOINT {name}")
 
 
 def generate_insert_statements(count: int) -> List[str]:
