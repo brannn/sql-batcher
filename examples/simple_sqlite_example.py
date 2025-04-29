@@ -133,7 +133,8 @@ def main():
     batcher = SQLBatcher(
         adapter=adapter,
         max_bytes=100_000,
-        merge_inserts=True
+        merge_inserts=True,
+        dry_run=False
     )
 
     start_time = time.time()
