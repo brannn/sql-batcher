@@ -1,6 +1,6 @@
 # SQL Batcher
 
-SQL Batcher is a Python library designed to optimize large-scale SQL operations by batching SQL statements, intelligently merging inserts, managing transaction size, and applying database-specific optimizations. It is particularly valuable in data engineering, ETL pipelines, and large dataset ingestion. Trino is our first-class query engine, with comprehensive support for all of the library's key capabilities and features. One of the key motivations for this library is Trino's query size limit of 1MB, which is why we use a default 600KB limit for Trino connections to provide a buffer.
+SQL Batcher is a Python library designed to optimize large-scale SQL operations by batching SQL statements, intelligently merging inserts, managing transaction size, and applying database-specific optimizations. It is particularly valuable in data engineering, ETL pipelines, and large dataset ingestion.
 
 [![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
