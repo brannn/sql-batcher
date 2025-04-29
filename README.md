@@ -4,7 +4,7 @@
 
 Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
 
-SQL Batcher addresses these pain points with a powerful value proposition:
+SQL Batcher attempts to address these pain points with:
 
 - **Performance Optimization**: Intelligently batch and merge SQL statements to reduce round-trips to the database, dramatically improving throughput for large-scale operations
 - **Memory Efficiency**: Control memory usage with configurable batch sizes and smart statement merging, preventing out-of-memory errors during massive data operations
