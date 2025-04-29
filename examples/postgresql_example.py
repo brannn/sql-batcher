@@ -167,9 +167,7 @@ def generate_order_data(num_orders: int, max_product_id: int) -> List[str]:
         order_number = f"ORD-{i:06d}"
         customer_name = f"Customer {i}"
         customer_email = f"customer{i}@example.com"
-        status = random.choice(
-            ["pending", "processing", "shipped", "delivered", "cancelled"]
-        )
+        status = random.choice(["pending", "processing", "shipped", "delivered", "cancelled"])
 
         # Create order date within the last 30 days
         days_ago = random.randint(0, 30)
@@ -233,14 +231,10 @@ def run_postgresql_example(args: argparse.Namespace) -> None:
 
     # Get connection parameters
     connection_params = get_connection_params()
-    print(
-        f"Connecting to PostgreSQL at {connection_params['host']}:{connection_params['port']}..."
-    )
+    print(f"Connecting to PostgreSQL at {connection_params['host']}:{connection_params['port']}...")
 
     # Create PostgreSQL adapter
-    adapter = PostgreSQLAdapter(
-        connection_params=connection_params, isolation_level="read_committed"
-    )
+    adapter = PostgreSQLAdapter(connection_params=connection_params, isolation_level="read_committed")
 
     # Set up database
     setup_database(adapter)
@@ -292,9 +286,7 @@ def run_postgresql_example(args: argparse.Namespace) -> None:
             order_statements = generate_order_data(args.orders, args.products)
 
             # Process all statements in batches
-            total_processed = batcher.process_statements(
-                order_statements, adapter.execute
-            )
+            total_processed = batcher.process_statements(order_statements, adapter.execute)
 
             # Commit the transaction
             adapter.commit_transaction()

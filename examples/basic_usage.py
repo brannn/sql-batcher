@@ -47,9 +47,7 @@ def main():
         email = f"user{i}@example.com"
         age = 20 + (i % 50)  # Ages between 20 and 69
 
-        statements.append(
-            f"INSERT INTO users (id, name, email, age) VALUES ({i}, '{name}', '{email}', {age})"
-        )
+        statements.append(f"INSERT INTO users (id, name, email, age) VALUES ({i}, '{name}', '{email}', {age})")
 
     print(f"Generated {len(statements)} statements")
 

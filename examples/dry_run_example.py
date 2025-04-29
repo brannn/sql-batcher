@@ -53,9 +53,7 @@ def main():
         # This function will not be called in dry run mode
         pass
 
-    total_processed = batcher.process_statements(
-        statements=statements, execute_callback=dummy_execute, query_collector=collector
-    )
+    total_processed = batcher.process_statements(statements=statements, execute_callback=dummy_execute, query_collector=collector)
 
     print(f"Processed {total_processed} statements")
 

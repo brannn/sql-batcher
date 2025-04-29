@@ -149,10 +149,7 @@ def generate_product_data(num_products: int) -> List[Tuple]:
     ]
 
     # Generate category INSERT statements
-    cat_inserts = [
-        f"INSERT INTO categories (id, name, description) VALUES {cat}"
-        for cat in categories
-    ]
+    cat_inserts = [f"INSERT INTO categories (id, name, description) VALUES {cat}" for cat in categories]
 
     # Generate product INSERT statements
     prod_data = []
@@ -167,10 +164,7 @@ def generate_product_data(num_products: int) -> List[Tuple]:
         name = name_template.format(f"Model {i}")
         prod_data.append((i, name, desc, price, cat_id))
 
-    return cat_inserts + [
-        f"INSERT INTO products (id, name, description, price, category_id) VALUES {p}"
-        for p in prod_data
-    ]
+    return cat_inserts + [f"INSERT INTO products (id, name, description, price, category_id) VALUES {p}" for p in prod_data]
 
 
 def generate_order_data(num_orders: int, max_product_id: int) -> List[str]:
@@ -187,9 +181,7 @@ def generate_order_data(num_orders: int, max_product_id: int) -> List[str]:
     # Generate customer data
     customers = [(i, f"Customer {i}", f"customer{i}@example.com") for i in range(1, 21)]
 
-    customer_inserts = [
-        f"INSERT INTO customers (id, name, email) VALUES {c}" for c in customers
-    ]
+    customer_inserts = [f"INSERT INTO customers (id, name, email) VALUES {c}" for c in customers]
 
     # Generate order data
     order_inserts = []
@@ -229,9 +221,7 @@ def run_example_with_merging() -> None:
 
     try:
         # Connect to PostgreSQL
-        print(
-            f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}..."
-        )
+        print(f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}...")
         conn = psycopg2.connect(**conn_params)
         conn.autocommit = False
 
@@ -295,9 +285,7 @@ def run_example_with_merging() -> None:
         print(
             f"Rows inserted: {cat_count} categories, {prod_count} products, {cust_count} customers, {order_count} orders, {item_count} order items"
         )
-        print(
-            f"Total rows: {cat_count + prod_count + cust_count + order_count + item_count}"
-        )
+        print(f"Total rows: {cat_count + prod_count + cust_count + order_count + item_count}")
 
     except Exception as e:
         print(f"Error: {e}")
@@ -312,9 +300,7 @@ def run_example_without_merging() -> None:
 
     try:
         # Connect to PostgreSQL
-        print(
-            f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}..."
-        )
+        print(f"Connecting to PostgreSQL at {conn_params['host']}:{conn_params['port']}...")
         conn = psycopg2.connect(**conn_params)
         conn.autocommit = False
 
@@ -378,9 +364,7 @@ def run_example_without_merging() -> None:
         print(
             f"Rows inserted: {cat_count} categories, {prod_count} products, {cust_count} customers, {order_count} orders, {item_count} order items"
         )
-        print(
-            f"Total rows: {cat_count + prod_count + cust_count + order_count + item_count}"
-        )
+        print(f"Total rows: {cat_count + prod_count + cust_count + order_count + item_count}")
 
     except Exception as e:
         print(f"Error: {e}")
