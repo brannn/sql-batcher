@@ -138,7 +138,7 @@ def main():
     )
 
     # Create an InsertMerger instance
-    merger = InsertMerger(max_bytes=100_000)
+    merger = InsertMerger(100_000)
 
     # Merge the statements manually
     merged_statements = []
