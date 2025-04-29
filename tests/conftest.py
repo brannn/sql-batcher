@@ -15,7 +15,7 @@ def pytest_configure(config: Any) -> None:
     # Add markers
     config.addinivalue_line("markers", "core: tests that don't require database connections")
     config.addinivalue_line("markers", "db: tests that require actual database connections")
-    config.addinivalue_line("markers", "postgres: tests that require PostgreSQL database connections")
+    config.addinivalue_line("markers", "postgresql: tests that require PostgreSQL database connections")
     config.addinivalue_line("markers", "snowflake: tests that require Snowflake database connections")
     config.addinivalue_line("markers", "trino: tests that require Trino database connections")
     config.addinivalue_line("markers", "bigquery: tests that require BigQuery database connections")
