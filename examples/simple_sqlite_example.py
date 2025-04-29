@@ -129,29 +129,15 @@ def main():
     adapter.executed_statements = []  # Clear executed statements
     collector = ListQueryCollector()  # Create a new collector
 
-    # Import the InsertMerger class directly
-    from sql_batcher.insert_merger import InsertMerger
-
+    # Create a batcher with merge_inserts=True
     batcher = SQLBatcher(
         adapter=adapter,
-        max_bytes=100_000
+        max_bytes=100_000,
+        merge_inserts=True
     )
 
-    # Create an InsertMerger instance
-    merger = InsertMerger(100_000)
-
-    # Merge the statements manually
-    merged_statements = []
-    for statement in statements:
-        result = merger.add_statement(statement)
-        if result is not None:
-            merged_statements.append(result)
-
-    # Add any remaining statements
-    merged_statements.extend(merger.flush_all())
-
     start_time = time.time()
-    batcher.process_statements(merged_statements, adapter.execute, collector)
+    batcher.process_statements(statements, adapter.execute, collector)
     end_time = time.time()
 
     time_with_merging = end_time - start_time
