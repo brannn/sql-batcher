@@ -68,12 +68,23 @@ All Python code is linted with:
 * [flake8](https://flake8.pycqa.org/en/latest/) for code style
 * [mypy](https://mypy.readthedocs.io/en/stable/) for type checking
 
-To ensure your code meets our style requirements, install the development dependencies and run the format and lint commands:
+To ensure your code meets our style requirements, we use pre-commit hooks that automatically format and lint your code when you commit changes:
 
 ```bash
-# Install development dependencies
-pip install -e ".[dev]"
+# Install pre-commit hooks
+pip install pre-commit
+pre-commit install
+```
 
+You can also run the hooks manually on all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Or run individual tools manually:
+
+```bash
 # Format the code
 black src/ tests/
 isort src/ tests/
@@ -109,7 +120,12 @@ To set up a development environment for SQL Batcher:
    ```
    pip install -e ".[dev,all]"
    ```
-5. Create a branch for your feature:
+5. Install pre-commit hooks:
+   ```
+   pip install pre-commit
+   pre-commit install
+   ```
+6. Create a branch for your feature:
    ```
    git checkout -b name-of-your-feature
    ```
@@ -122,13 +138,43 @@ Basic test commands:
 
 ```bash
 # Run core tests only (no database connections required)
-python run_full_tests.py --core-only
+python run_ci_tests.py --core
 
-# Run all available tests (requires database connections)
-python run_full_tests.py --all
+# Run PostgreSQL tests (requires PostgreSQL connection)
+python run_ci_tests.py --postgres
 
 # Run with test coverage reporting
-python run_full_tests.py --coverage
+python run_ci_tests.py --coverage
+```
+
+## Continuous Integration
+
+SQL Batcher uses GitHub Actions for continuous integration. The CI workflow runs automatically on all pull requests and pushes to the main branch.
+
+The CI workflow includes:
+
+1. **Linting and formatting checks**: Ensures code follows our style guidelines using black, isort, flake8, and mypy.
+2. **Core tests**: Runs tests that don't require database connections across multiple Python versions (3.8, 3.9, 3.10, 3.11).
+3. **PostgreSQL tests**: Runs tests that require a PostgreSQL database using a containerized PostgreSQL instance.
+4. **Package building**: Ensures the package can be built correctly.
+5. **Publishing**: Automatically publishes new releases to PyPI when a new version tag is pushed.
+
+You can see the CI workflow configuration in `.github/workflows/python-ci.yml`.
+
+To run the CI checks locally before submitting a pull request:
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run linting checks
+black --check src tests
+isort --check src tests
+flake8 src tests
+mypy src tests
+
+# Run tests
+python run_ci_tests.py --core --coverage
 ```
 
 ## Additional Resources

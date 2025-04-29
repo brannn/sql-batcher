@@ -376,7 +376,7 @@ class AsyncSnowflakeAdapter(AsyncSQLAdapter):
 
         result = await self.execute(
             f"""
-            SELECT 
+            SELECT
                 QUERY_ID,
                 QUERY_TEXT,
                 DATABASE_NAME,

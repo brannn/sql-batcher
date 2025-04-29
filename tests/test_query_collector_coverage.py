@@ -57,6 +57,7 @@ class TestAsyncQueryCollectorCoverage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up the test."""
         from sql_batcher.async_query_collector import AsyncQueryCollector
+
         self.collector = AsyncQueryCollector()
 
     async def test_clear_async(self):

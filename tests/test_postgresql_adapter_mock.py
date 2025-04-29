@@ -3,8 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # Patch the PSYCOPG2_AVAILABLE constant before importing the adapter
 with patch("sql_batcher.adapters.postgresql.PSYCOPG2_AVAILABLE", True):
     from sql_batcher.adapters.postgresql import PostgreSQLAdapter
@@ -29,19 +27,15 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
-        adapter = PostgreSQLAdapter(connection_params=connection_params)
+        adapter = PostgreSQLAdapter(connection_params=connection_params)  # noqa: F841
 
         # Verify the adapter was initialized correctly
         # The adapter doesn't expose these attributes directly, but we can verify
         # that the connection was created with the correct parameters
         mock_psycopg2.connect.assert_called_once_with(
-            host="mock-host",
-            port=5432,
-            user="mock-user",
-            password="mock-password",
-            database="mock-database"
+            host="mock-host", port=5432, user="mock-user", password="mock-password", database="mock-database"
         )
 
         # Connect to the database
@@ -49,11 +43,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
 
         # Verify the connection was created with the correct parameters
         mock_psycopg2.connect.assert_called_once_with(
-            host="mock-host",
-            port=5432,
-            user="mock-user",
-            password="mock-password",
-            database="mock-database"
+            host="mock-host", port=5432, user="mock-user", password="mock-password", database="mock-database"
         )
 
     @patch("sql_batcher.adapters.postgresql.PSYCOPG2_AVAILABLE", False)
@@ -66,7 +56,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
                 "port": 5432,
                 "user": "mock-user",
                 "password": "mock-password",
-                "database": "mock-database"
+                "database": "mock-database",
             }
             PostgreSQLAdapter(connection_params=connection_params)
 
@@ -96,7 +86,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -131,7 +121,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -161,7 +151,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -195,7 +185,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -251,7 +241,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -281,7 +271,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -315,7 +305,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -342,24 +332,15 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
 
         # Create indices
         indices = [
-            {
-                "name": "idx_users_id",
-                "columns": ["id"],
-                "type": "btree",
-                "unique": True
-            },
-            {
-                "name": "idx_users_name",
-                "columns": "name",
-                "type": "hash"
-            }
+            {"name": "idx_users_id", "columns": ["id"], "type": "btree", "unique": True},
+            {"name": "idx_users_name", "columns": "name", "type": "hash"},
         ]
         statements = adapter.create_indices("users", indices)
 
@@ -388,7 +369,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
             "port": 5432,
             "user": "mock-user",
             "password": "mock-password",
-            "database": "mock-database"
+            "database": "mock-database",
         }
         adapter = PostgreSQLAdapter(connection_params=connection_params)
         # The connection is created in __init__
@@ -397,10 +378,7 @@ class TestPostgreSQLAdapter(unittest.TestCase):
         mock_cursor.copy_from = MagicMock()
 
         # Use COPY for bulk insert
-        data = [
-            (1, "Alice"),
-            (2, "Bob")
-        ]
+        data = [(1, "Alice"), (2, "Bob")]
 
         # Mock the execute method to avoid actual database calls
         adapter.execute = MagicMock()

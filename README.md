@@ -1,9 +1,22 @@
 # SQL Batcher
 
-SQL Batcher is a Python library designed to optimize large-scale SQL operations by batching SQL statements, intelligently merging inserts, managing transaction size, and applying database-specific optimizations. It is particularly valuable in data engineering, ETL pipelines, and large dataset ingestion.
+## Why SQL Batcher?
+
+Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
+
+SQL Batcher attempts to address these pain points with:
+
+- **Performance Optimization**: Intelligently batch and merge SQL statements to reduce round-trips to the database, dramatically improving throughput for large-scale operations
+- **Memory Efficiency**: Control memory usage with configurable batch sizes and smart statement merging, preventing out-of-memory errors during massive data operations
+- **Database Adaptability**: Leverage database-specific optimizations with adapters for PostgreSQL, Trino, Snowflake, and more
+- **Transaction Management**: Simplify complex transaction handling with built-in savepoints, retries, and error recovery
+- **Developer Experience**: Write clean, maintainable code with an intuitive API that abstracts away the complexities of efficient database interactions
+
+SQL Batcher is particularly valuable in data engineering workflows, ETL pipelines, large dataset ingestion, and any scenario requiring high-performance database operations.
 
 [![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
+[![Python CI](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml/badge.svg)](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml)
 [![License](https://img.shields.io/github/license/yourusername/sql-batcher.svg)](https://github.com/yourusername/sql-batcher/blob/main/LICENSE)
 
 ## Key Features
@@ -212,10 +225,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Format your code (`./format_code.sh`)
-4. Commit your changes (`git commit -m 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+3. Install pre-commit hooks (`pip install pre-commit && pre-commit install`)
+4. Make your changes (the pre-commit hooks will automatically format your code)
+5. Commit your changes (`git commit -m 'Add some amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+The project uses pre-commit hooks to ensure code quality:
+- **black** for code formatting
+- **isort** for import sorting
+- **flake8** for code linting
+- **autoflake** for removing unused imports and variables
 
 ## License
 

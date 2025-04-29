@@ -1,10 +1,9 @@
 """Additional tests for the retry mechanism to improve coverage."""
 
-import asyncio
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
+import asyncio
 
 from sql_batcher.retry import RetryConfig, async_retry, retry
 
@@ -69,6 +68,7 @@ class TestRetryEdgeCases(unittest.TestCase):
 
     def test_retry_config_with_subclass_exceptions(self):
         """Test RetryConfig with exception subclasses."""
+
         # Create a custom exception hierarchy
         class CustomError(Exception):
             pass
@@ -87,6 +87,7 @@ class TestRetryEdgeCases(unittest.TestCase):
     @patch("time.sleep")
     def test_retry_preserves_function_metadata(self, mock_sleep):
         """Test that retry preserves function metadata."""
+
         # Define a function with docstring and metadata
         def test_func(a, b):
             """Test function docstring."""
@@ -109,6 +110,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep")
     async def test_async_retry_success_first_try(self, mock_sleep):
         """Test that an async function that succeeds on the first try is called only once."""
+
         # Create a mock async function that always succeeds
         async def mock_async_func():
             return "success"
@@ -129,6 +131,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep")
     async def test_async_retry_success_after_retries(self, mock_sleep):
         """Test that an async function that succeeds after retries is called the expected number of times."""
+
         # Create async functions for the side effects
         async def fail1():
             raise Exception("Error 1")
@@ -190,6 +193,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep")
     async def test_async_retry_with_args_and_kwargs(self, mock_sleep):
         """Test that args and kwargs are passed correctly to the async function."""
+
         # Create a mock async function that returns its args and kwargs
         async def test_func(*args, **kwargs):
             return args, kwargs
@@ -206,6 +210,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep")
     async def test_async_retry_preserves_function_metadata(self, mock_sleep):
         """Test that async_retry preserves function metadata."""
+
         # Define an async function with docstring and metadata
         async def test_func(a, b):
             """Test async function docstring."""
@@ -224,6 +229,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep")
     async def test_async_retry_with_real_async_function(self, mock_sleep):
         """Test async_retry with a real async function that uses await."""
+
         # Define an async function that uses await
         async def async_operation():
             # Simulate an async operation
@@ -232,6 +238,7 @@ class TestAsyncRetry(unittest.IsolatedAsyncioTestCase):
 
         # Create a function that fails first then succeeds
         call_count = 0
+
         async def side_effect_func():
             nonlocal call_count
             call_count += 1

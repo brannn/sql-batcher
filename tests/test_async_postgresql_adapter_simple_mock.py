@@ -3,8 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sql_batcher.adapters.async_postgresql import AsyncPostgreSQLAdapter
 
 
@@ -46,11 +44,7 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
         await adapter.connect()
 
         # Verify the pool was created with the correct parameters
-        mock_asyncpg.create_pool.assert_called_once_with(
-            dsn="postgresql://user:pass@host:5432/db",
-            min_size=1,
-            max_size=10
-        )
+        mock_asyncpg.create_pool.assert_called_once_with(dsn="postgresql://user:pass@host:5432/db", min_size=1, max_size=10)
 
     @patch("sql_batcher.adapters.async_postgresql.ASYNCPG_AVAILABLE", False)
     async def test_missing_asyncpg(self):

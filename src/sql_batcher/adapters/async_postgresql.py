@@ -273,7 +273,7 @@ class AsyncPostgreSQLAdapter(AsyncSQLAdapter):
             # Start a transaction
             async with conn.transaction():
                 # Use the COPY protocol
-                result = await conn.copy_records_to_table(
+                result = await conn.copy_records_to_table(  # noqa: F841
                     table_name,
                     records=data,
                     columns=column_names,

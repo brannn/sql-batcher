@@ -1,7 +1,7 @@
 """Tests for the SQLBatcher class to improve coverage."""
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock  # noqa: F401
 
 from sql_batcher.batcher import SQLBatcher
 from sql_batcher.query_collector import QueryCollector
@@ -36,7 +36,7 @@ class TestSQLBatcherCoverage(unittest.TestCase):
     def test_process_batch_empty(self):
         """Test executing an empty batch."""
         # Create a mock adapter
-        mock_adapter = MagicMock()
+        mock_adapter = MagicMock()  # noqa: F841
 
         # Execute an empty batch
         result = self.batcher.process_batch([])
@@ -70,6 +70,7 @@ class TestAsyncSQLBatcherCoverage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up the test."""
         from sql_batcher.async_batcher import AsyncSQLBatcher
+
         # Create a mock adapter
         self.mock_adapter = MagicMock()
         self.batcher = AsyncSQLBatcher(adapter=self.mock_adapter)
@@ -122,6 +123,7 @@ class TestAsyncSQLBatcherCoverage(unittest.IsolatedAsyncioTestCase):
 
         # Create a query collector
         from sql_batcher.async_query_collector import AsyncQueryCollector
+
         query_collector = AsyncQueryCollector()
 
         # Process statements with the query collector
