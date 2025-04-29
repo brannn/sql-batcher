@@ -1,14 +1,14 @@
 from typing import Any, Dict, List, Tuple, Union
+from unittest.mock import Mock
 
 import pytest
 
+from sql_batcher.adapters.postgresql import PostgreSQLAdapter
+
 pytest.importorskip("psycopg2")
-from unittest.mock import Mock
 
 # Mark all tests in this file as using postgres-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.postgres]
-
-from sql_batcher.adapters.postgresql import PostgreSQLAdapter
 
 
 def setup_mock_pg_connection(mocker: Any) -> Tuple[Any, Any]:
@@ -83,9 +83,7 @@ def test_pg_create_indices(mock_pg: Tuple[PostgreSQLAdapter, Any, Any]) -> None:
     statements = adapter.create_indices("test_table", indices)
 
     assert len(statements) == 2
-    assert (
-        "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)" in statements
-    )
+    assert "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)" in statements
     assert "CREATE INDEX idx_test_name ON test_table USING hash (name)" in statements
 
 
@@ -100,9 +98,7 @@ def test_pg_isolation_level(mocker: Any) -> None:
         isolation_level="serializable",
     )
 
-    assert (
-        connection.isolation_level == psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
-    )
+    assert connection.isolation_level == psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 
 
 def test_pg_cursor_factory(mocker: Any) -> None:
@@ -176,9 +172,7 @@ class TestPostgreSQLAdapter:
         result = self.adapter.execute("INSERT INTO users VALUES (1, 'Alice')")
 
         # Check behavior
-        self.mock_cursor.execute.assert_called_once_with(
-            "INSERT INTO users VALUES (1, 'Alice')"
-        )
+        self.mock_cursor.execute.assert_called_once_with("INSERT INTO users VALUES (1, 'Alice')")
         self.mock_cursor.fetchall.assert_not_called()
         assert result == []
 
@@ -188,9 +182,7 @@ class TestPostgreSQLAdapter:
         result = self.adapter.execute("COPY users FROM '/tmp/users.csv'")
 
         # Check behavior
-        self.mock_cursor.execute.assert_called_once_with(
-            "COPY users FROM '/tmp/users.csv'"
-        )
+        self.mock_cursor.execute.assert_called_once_with("COPY users FROM '/tmp/users.csv'")
         self.mock_connection.commit.assert_called_once()
         assert result == []
 
@@ -248,22 +240,16 @@ class TestPostgreSQLAdapter:
         result = self.adapter.execute("EXPLAIN ANALYZE SELECT * FROM users")
 
         # Check behavior
-        self.mock_cursor.execute.assert_called_once_with(
-            "EXPLAIN ANALYZE SELECT * FROM users"
-        )
+        self.mock_cursor.execute.assert_called_once_with("EXPLAIN ANALYZE SELECT * FROM users")
         assert result == [("Seq Scan on users",)]
 
     def test_create_temp_table(self) -> None:
         """Test creating a temporary table."""
         # Execute CREATE TEMP TABLE
-        result = self.adapter.execute(
-            "CREATE TEMP TABLE temp_users AS SELECT * FROM users"
-        )
+        result = self.adapter.execute("CREATE TEMP TABLE temp_users AS SELECT * FROM users")
 
         # Check behavior
-        self.mock_cursor.execute.assert_called_once_with(
-            "CREATE TEMP TABLE temp_users AS SELECT * FROM users"
-        )
+        self.mock_cursor.execute.assert_called_once_with("CREATE TEMP TABLE temp_users AS SELECT * FROM users")
         assert result == []
 
     def test_get_server_version(self) -> None:
@@ -284,9 +270,7 @@ class TestPostgreSQLAdapter:
 
         # Attempt to create the adapter
         with pytest.raises(ImportError) as exc_info:
-            PostgreSQLAdapter(
-                connection_params={"host": "localhost", "database": "test"}
-            )
+            PostgreSQLAdapter(connection_params={"host": "localhost", "database": "test"})
 
         assert "psycopg2-binary package is required" in str(exc_info.value)
 
@@ -296,9 +280,7 @@ class TestPostgreSQLAdapter:
         self.mock_cursor.description = None
 
         # Execute a batch of statements
-        result = self.adapter.execute(
-            "INSERT INTO users VALUES (1, 'Alice'); INSERT INTO users VALUES (2, 'Bob')"
-        )
+        result = self.adapter.execute("INSERT INTO users VALUES (1, 'Alice'); INSERT INTO users VALUES (2, 'Bob')")
 
         # Check behavior
         self.mock_cursor.execute.assert_called_once_with(
@@ -336,10 +318,5 @@ class TestPostgreSQLAdapter:
 
         # Verify the statements
         assert len(statements) == 2
-        assert (
-            "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)"
-            in statements
-        )
-        assert (
-            "CREATE INDEX idx_test_name ON test_table USING hash (name)" in statements
-        )
+        assert "CREATE UNIQUE INDEX idx_test_id ON test_table USING btree (id)" in statements
+        assert "CREATE INDEX idx_test_name ON test_table USING hash (name)" in statements

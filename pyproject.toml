@@ -73,7 +73,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.black]
-line-length = 88
+line-length = 130
 target-version = ["py38", "py39", "py310", "py311"]
 exclude = '''
 /(
@@ -88,10 +88,12 @@ exclude = '''
   | dist
 )/
 '''
+skip-string-normalization = false
+skip-magic-trailing-comma = false
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 130
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -101,6 +103,11 @@ skip_glob = ["*/docs/*", "setup.py"]
 honor_noqa = true
 treat_comments_as_code = ["# %%"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = ["sql_batcher"]
+known_third_party = ["pytest", "psycopg2", "trino", "snowflake", "google", "asyncio", "aiohttp"]
+# allow_wildcard_imports is not supported in newer isort versions
+# Allow code, docstrings, and comments before imports
+float_to_top = true
 
 [tool.mypy]
 python_version = "3.8"

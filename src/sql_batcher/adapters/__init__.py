@@ -6,16 +6,25 @@ Adapters provide a consistent interface for SQL Batcher to
 communicate with various database engines.
 """
 
+from sql_batcher.adapters.async_base import AsyncGenericAdapter, AsyncSQLAdapter
 from sql_batcher.adapters.base import SQLAdapter
 from sql_batcher.adapters.generic import GenericAdapter
 
-__all__ = ["SQLAdapter", "GenericAdapter"]
+__all__ = ["SQLAdapter", "GenericAdapter", "AsyncSQLAdapter", "AsyncGenericAdapter"]
 
 # Trino adapter is lazily imported to avoid hard dependency
 try:
     pass
 
     __all__.append("TrinoAdapter")
+except ImportError:
+    pass
+
+# Async Trino adapter is lazily imported to avoid hard dependency
+try:
+    pass
+
+    __all__.append("AsyncTrinoAdapter")
 except ImportError:
     pass
 
@@ -27,11 +36,11 @@ try:
 except ImportError:
     pass
 
-# Spark adapter is lazily imported to avoid hard dependency
+# Async Snowflake adapter is lazily imported to avoid hard dependency
 try:
     pass
 
-    __all__.append("SparkAdapter")
+    __all__.append("AsyncSnowflakeAdapter")
 except ImportError:
     pass
 
@@ -43,10 +52,26 @@ try:
 except ImportError:
     pass
 
+# Async BigQuery adapter is lazily imported to avoid hard dependency
+try:
+    pass
+
+    __all__.append("AsyncBigQueryAdapter")
+except ImportError:
+    pass
+
 # PostgreSQL adapter is lazily imported to avoid hard dependency
 try:
     pass
 
     __all__.append("PostgreSQLAdapter")
+except ImportError:
+    pass
+
+# Async PostgreSQL adapter is lazily imported to avoid hard dependency
+try:
+    pass
+
+    __all__.append("AsyncPostgreSQLAdapter")
 except ImportError:
     pass

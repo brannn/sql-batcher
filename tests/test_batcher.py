@@ -32,9 +32,7 @@ class TestSQLBatcher:
 
     def test_init_with_custom_values(self) -> None:
         """Test initialization with custom values."""
-        batcher = SQLBatcher(
-            adapter=self.adapter, max_bytes=500, delimiter="|", dry_run=True
-        )
+        batcher = SQLBatcher(adapter=self.adapter, max_bytes=500, delimiter="|", dry_run=True)
         assert batcher.max_bytes == 500
         assert batcher.delimiter == "|"
         assert batcher.dry_run is True
@@ -165,15 +163,11 @@ class TestSQLBatcher:
         assert result == 4
 
         # Test with VALUES only
-        result = batcher.detect_column_count(
-            "INSERT INTO users VALUES (1, 'John', 'john@example.com', 30)"
-        )
+        result = batcher.detect_column_count("INSERT INTO users VALUES (1, 'John', 'john@example.com', 30)")
         assert result == 4
 
         # Test with complex nested values
-        result = batcher.detect_column_count(
-            "INSERT INTO data VALUES (1, ARRAY[1, 2, 3], '{\"key\": \"value\"}', 'text')"
-        )
+        result = batcher.detect_column_count("INSERT INTO data VALUES (1, ARRAY[1, 2, 3], '{\"key\": \"value\"}', 'text')")
         assert result == 4
 
         # Test with non-INSERT statement
@@ -242,9 +236,7 @@ class TestSQLBatcher:
         )
 
         # Test very wide table (many columns) - should hit lower bound
-        wide_statement = (
-            "INSERT INTO very_wide_table VALUES (" + ", ".join(["1"] * 50) + ")"
-        )
+        wide_statement = "INSERT INTO very_wide_table VALUES (" + ", ".join(["1"] * 50) + ")"
         batcher.update_adjustment_factor(wide_statement)
 
         # Should be clamped to min value

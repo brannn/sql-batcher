@@ -216,9 +216,7 @@ class SnowflakeAdapter(SQLAdapter):
         result = self.execute(f"SHOW TABLES IN {database}.{schema}")
         return [row[0] for row in result]
 
-    def get_columns(
-        self, table: str, database: str, schema: str
-    ) -> List[Dict[str, str]]:
+    def get_columns(self, table: str, database: str, schema: str) -> List[Dict[str, str]]:
         """
         Get column information for a table.
 

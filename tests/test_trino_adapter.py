@@ -3,10 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from sql_batcher.adapters.trino import TrinoAdapter
+
 # Mark all tests in this file as using trino-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.trino]
-
-from sql_batcher.adapters.trino import TrinoAdapter
 
 
 def setup_mock_trino_connection(mocker: Any) -> Tuple[Any, Any]:
@@ -193,9 +193,7 @@ class TestTrinoAdapter:
         result = self.adapter.execute("INSERT INTO users VALUES (3, 'New User')")
 
         # Verify the query was executed with the correct SQL
-        self.mock_cursor.execute.assert_called_once_with(
-            "INSERT INTO users VALUES (3, 'New User')"
-        )
+        self.mock_cursor.execute.assert_called_once_with("INSERT INTO users VALUES (3, 'New User')")
 
         # Verify the result is empty for non-SELECT statements
         assert result == []
@@ -212,19 +210,13 @@ class TestTrinoAdapter:
         assert self.mock_cursor.execute.call_count == 3
 
         # First call should set query_max_run_time
-        self.mock_cursor.execute.assert_any_call(
-            "SET SESSION query_max_run_time = '2h'"
-        )
+        self.mock_cursor.execute.assert_any_call("SET SESSION query_max_run_time = '2h'")
 
         # Second call should set distributed_join
-        self.mock_cursor.execute.assert_any_call(
-            "SET SESSION distributed_join = 'true'"
-        )
+        self.mock_cursor.execute.assert_any_call("SET SESSION distributed_join = 'true'")
 
         # Third call should execute the actual statement
-        self.mock_cursor.execute.assert_any_call(
-            "CREATE TABLE test (id INT, name VARCHAR)"
-        )
+        self.mock_cursor.execute.assert_any_call("CREATE TABLE test (id INT, name VARCHAR)")
 
     def test_begin_transaction(self) -> None:
         """Test beginning a transaction."""
@@ -299,9 +291,7 @@ class TestTrinoAdapter:
         result = self.adapter.get_tables("catalog1", "schema1")
 
         # Verify the query was executed
-        self.mock_cursor.execute.assert_called_once_with(
-            "SHOW TABLES FROM catalog1.schema1"
-        )
+        self.mock_cursor.execute.assert_called_once_with("SHOW TABLES FROM catalog1.schema1")
 
         # Verify the result
         assert result == ["table1", "table2"]
@@ -323,9 +313,7 @@ class TestTrinoAdapter:
         result = self.adapter.get_columns("catalog1", "schema1", "table1")
 
         # Verify the query was executed
-        self.mock_cursor.execute.assert_called_once_with(
-            "SHOW COLUMNS FROM catalog1.schema1.table1"
-        )
+        self.mock_cursor.execute.assert_called_once_with("SHOW COLUMNS FROM catalog1.schema1.table1")
 
         # Verify the result
         assert result == [
@@ -342,9 +330,7 @@ class TestTrinoAdapter:
         assert self.adapter._session_properties["query_max_memory"] == "2GB"
 
         # Verify the property was set in the session
-        self.mock_cursor.execute.assert_called_once_with(
-            "SET SESSION query_max_memory = '2GB'"
-        )
+        self.mock_cursor.execute.assert_called_once_with("SET SESSION query_max_memory = '2GB'")
 
     def test_execute_with_http_headers(self) -> None:
         """Test executing a query with HTTP headers."""
@@ -362,12 +348,8 @@ class TestTrinoAdapter:
 
         # Verify the headers were set
         assert self.mock_cursor.execute.call_count == 3
-        self.mock_cursor.execute.assert_any_call(
-            "SET SESSION query_max_run_time = '2h'"
-        )
-        self.mock_cursor.execute.assert_any_call(
-            "SET SESSION distributed_join = 'true'"
-        )
+        self.mock_cursor.execute.assert_any_call("SET SESSION query_max_run_time = '2h'")
+        self.mock_cursor.execute.assert_any_call("SET SESSION distributed_join = 'true'")
         self.mock_cursor.execute.assert_any_call("SELECT * FROM test")
 
     def test_missing_trino_package(self, monkeypatch: Any) -> None:
