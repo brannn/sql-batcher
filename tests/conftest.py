@@ -56,13 +56,13 @@ def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
     """Add markers to tests based on their requirements and skip if needed."""
     # Add markers based on test file names
     for item in items:
-        if "test_postgresql_adapter" in item.nodeid:
+        if "test_postgresql_adapter" in item.nodeid and "_mock" not in item.nodeid:
             item.add_marker(pytest.mark.postgresql)
-        elif "test_snowflake_adapter" in item.nodeid:
+        elif "test_snowflake_adapter" in item.nodeid and "_mock" not in item.nodeid:
             item.add_marker(pytest.mark.snowflake)
-        elif "test_trino_adapter" in item.nodeid:
+        elif "test_trino_adapter" in item.nodeid and "_mock" not in item.nodeid:
             item.add_marker(pytest.mark.trino)
-        elif "test_bigquery_adapter" in item.nodeid:
+        elif "test_bigquery_adapter" in item.nodeid and "_mock" not in item.nodeid:
             item.add_marker(pytest.mark.bigquery)
 
     # Skip tests based on available connections
