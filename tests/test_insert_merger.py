@@ -117,16 +117,12 @@ class TestInsertMerger(unittest.TestCase):
         # Check internal state
         self.assertIn("test", merger.table_maps)
         self.assertEqual(merger.table_maps["test"]["columns"], "(id, name)")
-        self.assertEqual(
-            merger.table_maps["test"]["values"], ["(1, 'Alice')", "(2, 'Bob')"]
-        )
+        self.assertEqual(merger.table_maps["test"]["values"], ["(1, 'Alice')", "(2, 'Bob')"])
 
         # Flush and check the result
         results = merger.flush_all()
         self.assertEqual(len(results), 1)
-        self.assertEqual(
-            results[0], "INSERT INTO test (id, name) VALUES (1, 'Alice'), (2, 'Bob')"
-        )
+        self.assertEqual(results[0], "INSERT INTO test (id, name) VALUES (1, 'Alice'), (2, 'Bob')")
 
     def test_incompatible_columns(self) -> None:
         """Test handling INSERT statements with incompatible columns."""

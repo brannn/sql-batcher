@@ -34,6 +34,7 @@ class TrinoAdapter(SQLAdapter):
         user: Username for authentication
         catalog: Trino catalog to use
         schema: Schema name within the catalog
+        role: Trino role to use (will be set as 'x-trino-role' HTTP header)
         use_ssl: Whether to use SSL for connection
         verify_ssl: Whether to verify SSL certificate
         session_properties: Dictionary of session properties to set
@@ -49,6 +50,7 @@ class TrinoAdapter(SQLAdapter):
         user: str = "trino",
         catalog: Optional[str] = None,
         schema: Optional[str] = None,
+        role: Optional[str] = None,
         use_ssl: bool = False,
         verify_ssl: bool = True,
         session_properties: Optional[Dict[str, str]] = None,
@@ -58,10 +60,7 @@ class TrinoAdapter(SQLAdapter):
     ) -> None:
         """Initialize the Trino adapter."""
         if not TRINO_AVAILABLE:
-            raise ImportError(
-                "trino package is required for TrinoAdapter. "
-                "Install it with: pip install trino"
-            )
+            raise ImportError("trino package is required for TrinoAdapter. " "Install it with: pip install trino")
 
         self._session_properties = session_properties or {}
 
@@ -79,8 +78,15 @@ class TrinoAdapter(SQLAdapter):
             conn_params["catalog"] = catalog
         if schema:
             conn_params["schema"] = schema
-        if http_headers:
-            conn_params["http_headers"] = http_headers
+
+        # Handle HTTP headers and role
+        headers = http_headers.copy() if http_headers else {}
+        if role:
+            # Set the x-trino-role header with the specified role
+            headers["x-trino-role"] = f"system=ROLE{{{role}}}"
+        if headers:
+            conn_params["http_headers"] = headers
+
         if isolation_level:
             conn_params["isolation_level"] = isolation_level
 
@@ -99,16 +105,15 @@ class TrinoAdapter(SQLAdapter):
         """
         Get the maximum query size in bytes.
 
-        Trino has a practical limit of around 1MB for query size.
+        Trino has a practical limit of 1MB for query size.
+        We use a 600KB limit to provide a buffer and reduce the likelihood of hitting the limit.
 
         Returns:
-            Maximum query size in bytes (1,000,000)
+            Maximum query size in bytes (600,000)
         """
-        return 1_000_000  # 1MB default limit
+        return 600_000  # 600KB default limit
 
-    def execute(
-        self, sql: str, extra_headers: Optional[Dict[str, str]] = None
-    ) -> List[Tuple[Any, ...]]:
+    def execute(self, sql: str, extra_headers: Optional[Dict[str, str]] = None) -> List[Tuple[Any, ...]]:
         """
         Execute a SQL statement and return results.
 
@@ -224,9 +229,7 @@ class TrinoAdapter(SQLAdapter):
         result = self.execute(f"SHOW TABLES FROM {catalog}.{schema}")
         return [row[0] for row in result]
 
-    def get_columns(
-        self, table: str, catalog: str, schema: str
-    ) -> List[Dict[str, str]]:
+    def get_columns(self, table: str, catalog: str, schema: str) -> List[Dict[str, str]]:
         """
         Get column information for a table.
 

@@ -116,9 +116,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
 
         # Verify all values were processed
         self.assertEqual(user_values_found, 3, "Not all user values were executed")
-        self.assertEqual(
-            product_values_found, 2, "Not all product values were executed"
-        )
+        self.assertEqual(product_values_found, 2, "Not all product values were executed")
         self.assertTrue(update_executed, "UPDATE statement was not executed")
 
     def test_process_statements_without_insert_merging(self) -> None:
@@ -225,9 +223,7 @@ class TestSQLBatcherInsertMerging(unittest.TestCase):
         self.assertTrue(has_id_name_3, "Second name statement not executed")
 
         # Verify compatible statements were merged
-        self.assertTrue(
-            name_statements_merged, "Compatible name statements were not merged"
-        )
+        self.assertTrue(name_statements_merged, "Compatible name statements were not merged")
 
 
 if __name__ == "__main__":

@@ -51,8 +51,7 @@ class PostgreSQLAdapter(SQLAdapter):
         """Initialize the PostgreSQL adapter."""
         if not PSYCOPG2_AVAILABLE:
             raise ImportError(
-                "psycopg2-binary package is required for PostgreSQLAdapter. "
-                "Install it with: pip install psycopg2-binary"
+                "psycopg2-binary package is required for PostgreSQLAdapter. " "Install it with: pip install psycopg2-binary"
             )
 
         # Add application name if provided
@@ -68,21 +67,13 @@ class PostgreSQLAdapter(SQLAdapter):
         # Set isolation level if provided
         if isolation_level:
             if isolation_level.lower() == "read_committed":
-                self._connection.isolation_level = (
-                    psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
-                )
+                self._connection.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
             elif isolation_level.lower() == "serializable":
-                self._connection.isolation_level = (
-                    psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
-                )
+                self._connection.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
             elif isolation_level.lower() == "repeatable_read":
-                self._connection.isolation_level = (
-                    psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
-                )
+                self._connection.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
             elif isolation_level.lower() == "read_uncommitted":
-                self._connection.isolation_level = (
-                    psycopg2.extensions.ISOLATION_LEVEL_READ_UNCOMMITTED
-                )
+                self._connection.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_READ_UNCOMMITTED
 
         # Create cursor with factory if provided
         self._cursor_factory = cursor_factory
@@ -142,6 +133,18 @@ class PostgreSQLAdapter(SQLAdapter):
     def rollback_transaction(self) -> None:
         """Rollback the current transaction."""
         self._connection.rollback()
+
+    def create_savepoint(self, name: str) -> None:
+        """Create a savepoint with the given name."""
+        self._cursor.execute(f"SAVEPOINT {name}")
+
+    def rollback_to_savepoint(self, name: str) -> None:
+        """Rollback to the savepoint with the given name."""
+        self._cursor.execute(f"ROLLBACK TO SAVEPOINT {name}")
+
+    def release_savepoint(self, name: str) -> None:
+        """Release the savepoint with the given name."""
+        self._cursor.execute(f"RELEASE SAVEPOINT {name}")
 
     def close(self) -> None:
         """Close the connection."""
@@ -260,9 +263,7 @@ class PostgreSQLAdapter(SQLAdapter):
 
         return len(data)
 
-    def create_indices(
-        self, table_name: str, indices: List[Dict[str, Union[str, List[str], bool]]]
-    ) -> List[str]:
+    def create_indices(self, table_name: str, indices: List[Dict[str, Union[str, List[str], bool]]]) -> List[str]:
         """
         Create indices on a table.
 
@@ -293,10 +294,7 @@ class PostgreSQLAdapter(SQLAdapter):
 
             # Build the CREATE INDEX statement
             unique_str = "UNIQUE " if unique else ""
-            statement = (
-                f"CREATE {unique_str}INDEX {name} ON {table_name} "
-                f"USING {index_type} ({column_list})"
-            )
+            statement = f"CREATE {unique_str}INDEX {name} ON {table_name} " f"USING {index_type} ({column_list})"
             statements.append(statement)
 
         return statements

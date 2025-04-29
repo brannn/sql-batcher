@@ -23,6 +23,7 @@ class QueryCollector:
         delimiter (str): SQL statement delimiter.
         dry_run (bool): Whether to operate in dry run mode.
         auto_adjust_for_columns (bool): Whether to automatically adjust for columns.
+        merge_inserts (bool): Whether to merge compatible INSERT statements.
     """
 
     def __init__(
@@ -33,6 +34,7 @@ class QueryCollector:
         min_adjustment_factor: float = 0.5,
         max_adjustment_factor: float = 2.0,
         auto_adjust_for_columns: bool = False,
+        merge_inserts: bool = False,
     ) -> None:
         """Initialize a QueryCollector."""
         self.queries: List[Dict[str, Any]] = []
@@ -45,6 +47,7 @@ class QueryCollector:
         self.delimiter = delimiter
         self.dry_run = dry_run
         self.auto_adjust_for_columns = auto_adjust_for_columns
+        self.merge_inserts = merge_inserts
 
     def collect(self, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -191,6 +194,15 @@ class QueryCollector:
             bool: True if dry run mode is enabled.
         """
         return self.dry_run
+
+    def should_merge_inserts(self) -> bool:
+        """
+        Check if insert merging is enabled.
+
+        Returns:
+            bool: True if insert merging is enabled.
+        """
+        return self.merge_inserts
 
 
 class ListQueryCollector(QueryCollector):

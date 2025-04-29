@@ -3,10 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from sql_batcher.adapters.bigquery import BigQueryAdapter
+
 # Mark all tests in this file as using bigquery-specific functionality
 pytestmark = [pytest.mark.db, pytest.mark.bigquery]
-
-from sql_batcher.adapters.bigquery import BigQueryAdapter
 
 
 def setup_mock_bq_connection() -> Tuple[MagicMock, MagicMock]:
@@ -130,21 +130,15 @@ class TestBigQueryAdapter:
         ]
 
         # Patch the required modules
-        monkeypatch.setattr(
-            "sql_batcher.adapters.bigquery.bigquery", self.mock_bigquery
-        )
+        monkeypatch.setattr("sql_batcher.adapters.bigquery.bigquery", self.mock_bigquery)
 
         # Create the adapter
-        self.adapter = BigQueryAdapter(
-            project_id="test-project", dataset_id="test_dataset", location="US"
-        )
+        self.adapter = BigQueryAdapter(project_id="test-project", dataset_id="test_dataset", location="US")
 
     def test_init(self) -> None:
         """Test initialization."""
         # Check that the client was created with the correct parameters
-        self.mock_bigquery.Client.assert_called_once_with(
-            project="test-project", location="US"
-        )
+        self.mock_bigquery.Client.assert_called_once_with(project="test-project", location="US")
 
         # Check that the adapter has the correct properties
         assert self.adapter._client == self.mock_client
@@ -186,17 +180,12 @@ class TestBigQueryAdapter:
         self.mock_query_job.result.return_value = empty_mock_result
 
         # Execute an INSERT statement
-        result = self.adapter.execute(
-            "INSERT INTO `test_dataset.users` (id, name) VALUES (3, 'New User')"
-        )
+        result = self.adapter.execute("INSERT INTO `test_dataset.users` (id, name) VALUES (3, 'New User')")
 
         # Verify the query was executed
         self.mock_client.query.assert_called_once()
         args, kwargs = self.mock_client.query.call_args
-        assert (
-            args[0]
-            == "INSERT INTO `test_dataset.users` (id, name) VALUES (3, 'New User')"
-        )
+        assert args[0] == "INSERT INTO `test_dataset.users` (id, name) VALUES (3, 'New User')"
 
         # Verify result
         assert result == []

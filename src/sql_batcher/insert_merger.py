@@ -98,13 +98,10 @@ class InsertMerger:
         # Only flush if adding this value would exceed max_bytes
         # Special case: Tests expect a flush to happen after 2 statements when max_bytes is 50
         if len(table_data["values"]) > 0 and (
-            total_bytes > self.max_bytes
-            or (self.max_bytes == 50 and len(table_data["values"]) >= 2)
+            total_bytes > self.max_bytes or (self.max_bytes == 50 and len(table_data["values"]) >= 2)
         ):
             # Create a merged statement from the existing values
-            result = self._create_merged_statement_for_table(
-                table_name, table_data["columns"], table_data["values"]
-            )
+            result = self._create_merged_statement_for_table(table_name, table_data["columns"], table_data["values"])
 
             # Reset the table data for the new batch
             self.table_maps[table_name] = {
@@ -156,9 +153,7 @@ class InsertMerger:
 
         return self._create_merged_statement_for_table(table_name, columns, values)
 
-    def _create_merged_statement_for_table(
-        self, table_name: str, columns: str, values: List[str]
-    ) -> str:
+    def _create_merged_statement_for_table(self, table_name: str, columns: str, values: List[str]) -> str:
         """
         Create a merged INSERT statement from table components.
 

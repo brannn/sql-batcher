@@ -76,8 +76,7 @@ class BigQueryAdapter(SQLAdapter):
         """
         if not _has_bigquery:
             raise ImportError(
-                "Google Cloud BigQuery library is not installed. "
-                "Install it with 'pip install \"sql-batcher[bigquery]\"'"
+                "Google Cloud BigQuery library is not installed. " "Install it with 'pip install \"sql-batcher[bigquery]\"'"
             )
 
         self.project_id = project_id
@@ -91,17 +90,14 @@ class BigQueryAdapter(SQLAdapter):
         if client:
             self.client = client
         else:
-            self.client = bigquery.Client(
-                project=project_id, credentials=credentials, location=location
-            )
+            self.client = bigquery.Client(project=project_id, credentials=credentials, location=location)
 
         # Set up default job configuration
         self.job_config = bigquery.QueryJobConfig()
 
         if default_query_parameters:
             self.job_config.query_parameters = [
-                bigquery.ScalarQueryParameter(k, self._get_param_type(v), v)
-                for k, v in default_query_parameters.items()
+                bigquery.ScalarQueryParameter(k, self._get_param_type(v), v) for k, v in default_query_parameters.items()
             ]
 
         if timeout_ms:

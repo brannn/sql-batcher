@@ -13,32 +13,15 @@ import pytest
 def pytest_configure(config: Any) -> None:
     """Configure pytest with custom markers and options."""
     # Add markers
-    config.addinivalue_line(
-        "markers", "core: tests that don't require database connections"
-    )
-    config.addinivalue_line(
-        "markers", "db: tests that require actual database connections"
-    )
-    config.addinivalue_line(
-        "markers", "postgres: tests that require PostgreSQL database connections"
-    )
-    config.addinivalue_line(
-        "markers", "snowflake: tests that require Snowflake database connections"
-    )
-    config.addinivalue_line(
-        "markers", "trino: tests that require Trino database connections"
-    )
-    config.addinivalue_line(
-        "markers", "bigquery: tests that require BigQuery database connections"
-    )
-    config.addinivalue_line(
-        "markers", "spark: tests that require Spark database connections"
-    )
+    config.addinivalue_line("markers", "core: tests that don't require database connections")
+    config.addinivalue_line("markers", "db: tests that require actual database connections")
+    config.addinivalue_line("markers", "postgres: tests that require PostgreSQL database connections")
+    config.addinivalue_line("markers", "snowflake: tests that require Snowflake database connections")
+    config.addinivalue_line("markers", "trino: tests that require Trino database connections")
+    config.addinivalue_line("markers", "bigquery: tests that require BigQuery database connections")
 
     # Add command-line options
-    config.addinivalue_line(
-        "addopts", "--postgres --snowflake --trino --bigquery --spark"
-    )
+    config.addinivalue_line("addopts", "--postgres --snowflake --trino --bigquery")
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -67,12 +50,6 @@ def pytest_addoption(parser: Any) -> None:
         default=False,
         help="Run BigQuery tests",
     )
-    parser.addoption(
-        "--spark",
-        action="store_true",
-        default=False,
-        help="Run Spark tests",
-    )
 
 
 def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
@@ -87,15 +64,12 @@ def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
             item.add_marker(pytest.mark.trino)
         elif "test_bigquery_adapter" in item.nodeid:
             item.add_marker(pytest.mark.bigquery)
-        elif "test_spark_adapter" in item.nodeid:
-            item.add_marker(pytest.mark.spark)
 
     # Skip tests based on available connections
     skip_postgres = pytest.mark.skip(reason="PostgreSQL connection not available")
     skip_snowflake = pytest.mark.skip(reason="Snowflake connection not available")
     skip_trino = pytest.mark.skip(reason="Trino connection not available")
     skip_bigquery = pytest.mark.skip(reason="BigQuery connection not available")
-    skip_spark = pytest.mark.skip(reason="Spark connection not available")
 
     for item in items:
         if "postgresql" in item.keywords and not config.getoption("--postgres"):
@@ -106,8 +80,6 @@ def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
             item.add_marker(skip_trino)
         elif "bigquery" in item.keywords and not config.getoption("--bigquery"):
             item.add_marker(skip_bigquery)
-        elif "spark" in item.keywords and not config.getoption("--spark"):
-            item.add_marker(skip_spark)
 
 
 @pytest.fixture(scope="session")
@@ -182,19 +154,6 @@ def has_bigquery_connection() -> bool:
 
 
 @pytest.fixture(scope="session")
-def has_spark_connection() -> bool:
-    """Check if Spark connection is available."""
-    try:
-        from pyspark.sql import SparkSession
-
-        spark = SparkSession.builder.getOrCreate()
-        spark.stop()
-        return True
-    except Exception:
-        return False
-
-
-@pytest.fixture(scope="session")
 def postgres_connection_params() -> Dict[str, Any]:
     """Get PostgreSQL connection parameters."""
     return {
@@ -238,15 +197,6 @@ def bigquery_connection_params() -> Dict[str, str]:
         "project_id": os.getenv("BIGQUERY_PROJECT_ID", ""),
         "dataset_id": os.getenv("BIGQUERY_DATASET_ID", ""),
         "location": os.getenv("BIGQUERY_LOCATION", "US"),
-    }
-
-
-@pytest.fixture(scope="session")
-def spark_connection_params() -> Dict[str, str]:
-    """Get Spark connection parameters."""
-    return {
-        "master": os.getenv("SPARK_MASTER", "local[*]"),
-        "app_name": os.getenv("SPARK_APP_NAME", "sql_batcher_test"),
     }
 
 
