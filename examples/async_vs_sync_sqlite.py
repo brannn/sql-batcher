@@ -34,7 +34,7 @@ class SQLiteAdapter(SQLAdapter):
         cursor = self.connection.cursor()
         cursor.executescript(sql)
         self.connection.commit()
-        
+
         # For SELECT statements, return the results
         if sql.strip().upper().startswith("SELECT"):
             return [dict(row) for row in cursor.fetchall()]
@@ -74,7 +74,7 @@ class AsyncSQLiteAdapter(AsyncSQLAdapter):
         cursor = self.connection.cursor()
         cursor.executescript(sql)
         self.connection.commit()
-        
+
         # For SELECT statements, return the results
         if sql.strip().upper().startswith("SELECT"):
             return [dict(row) for row in cursor.fetchall()]
@@ -103,25 +103,26 @@ def run_sync_example(num_statements: int) -> float:
     # Create adapter and batcher
     adapter = SQLiteAdapter()
     batcher = SQLBatcher(adapter=adapter, max_bytes=100_000)
-    
+
     # Create the table
     adapter.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
-    
+
     # Generate statements
     statements = generate_insert_statements(num_statements)
-    
+
     # Measure execution time
     start_time = time.time()
     batcher.process_statements(statements, adapter.execute)
     end_time = time.time()
-    
+
     # Verify the results
     result = adapter.execute("SELECT COUNT(*) as count FROM users")
-    print(f"Synchronous: Inserted {result[0]['count']} records")
-    
+    count = result[0]['count'] if result else 0
+    print(f"Synchronous: Inserted {count} records")
+
     # Close the connection
     adapter.close()
-    
+
     return end_time - start_time
 
 
@@ -130,25 +131,26 @@ async def run_async_example(num_statements: int) -> float:
     # Create adapter and batcher
     adapter = AsyncSQLiteAdapter()
     batcher = AsyncSQLBatcher(adapter=adapter, max_bytes=100_000)
-    
+
     # Create the table
     await adapter.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
-    
+
     # Generate statements
     statements = generate_insert_statements(num_statements)
-    
+
     # Measure execution time
     start_time = time.time()
     await batcher.process_statements(statements, adapter.execute)
     end_time = time.time()
-    
+
     # Verify the results
     result = await adapter.execute("SELECT COUNT(*) as count FROM users")
-    print(f"Asynchronous: Inserted {result[0]['count']} records")
-    
+    count = result[0]['count'] if result else 0
+    print(f"Asynchronous: Inserted {count} records")
+
     # Close the connection
     await adapter.close()
-    
+
     return end_time - start_time
 
 
@@ -157,22 +159,22 @@ def main():
     print("SQL Batcher - Async vs. Sync Example (SQLite)")
     print("============================================")
     print()
-    
+
     # Number of statements to process
     num_statements = 1000
     print(f"Processing {num_statements} INSERT statements...")
     print()
-    
+
     # Run synchronous example
     sync_time = run_sync_example(num_statements)
     print(f"Synchronous execution time: {sync_time:.4f} seconds")
     print()
-    
+
     # Run asynchronous example
     async_time = asyncio.run(run_async_example(num_statements))
     print(f"Asynchronous execution time: {async_time:.4f} seconds")
     print()
-    
+
     # Compare results
     if sync_time > async_time:
         speedup = sync_time / async_time
@@ -180,7 +182,7 @@ def main():
     else:
         slowdown = async_time / sync_time
         print(f"Sync is {slowdown:.2f}x faster than async")
-    
+
     print()
     print("Note: Since SQLite is a file-based database and doesn't have true async support,")
     print("the async example simulates async execution by running in a separate thread.")
