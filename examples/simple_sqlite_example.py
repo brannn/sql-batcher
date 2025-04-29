@@ -174,7 +174,9 @@ def main():
         print("\nExample merged query:")
         print("-" * 80)
         print(queries[0]["query"][:500] + "..." if len(queries[0]["query"]) > 500 else queries[0]["query"])
-        print(f"Size: {queries[0]['size']} bytes")
+        # Calculate the size of the query
+        query_size = len(queries[0]['query'].encode('utf-8'))
+        print(f"Size: {query_size} bytes")
         print("-" * 80)
 
     # Close the connection
