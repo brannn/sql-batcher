@@ -13,7 +13,7 @@ from sql_batcher.adapters.generic import GenericAdapter
 T = TypeVar("T")
 
 
-class TestAdapter(Protocol):
+class AdapterProtocol(Protocol):
     """Test adapter protocol."""
 
     def execute(self, sql: str) -> List[Tuple[Any, ...]]:
@@ -41,7 +41,7 @@ class TestAdapter(Protocol):
         ...
 
 
-class TestAdapterImpl(SQLAdapter):
+class MockAdapter(SQLAdapter):
     """Test implementation of SQLAdapter."""
 
     def __init__(self, max_query_size: Optional[int] = None):
@@ -90,20 +90,20 @@ class TestAdapterImpl(SQLAdapter):
 
 def test_adapter_execute() -> None:
     """Test adapter execute method."""
-    adapter = TestAdapterImpl()
+    adapter = MockAdapter()
     adapter.execute("SELECT 1")
     assert adapter.get_executed_statements() == ["SELECT 1"]
 
 
 def test_adapter_max_query_size() -> None:
     """Test adapter max query size."""
-    adapter = TestAdapterImpl()
+    adapter = MockAdapter()
     assert adapter.get_max_query_size() == 500_000
 
 
 def test_adapter_transaction() -> None:
     """Test adapter transaction methods."""
-    adapter = TestAdapterImpl()
+    adapter = MockAdapter()
 
     # Test basic transaction flow
     adapter.begin_transaction()
@@ -116,14 +116,14 @@ def test_adapter_transaction() -> None:
 
 
 @pytest.fixture
-def adapter() -> TestAdapterImpl:
+def adapter() -> MockAdapter:
     """Create a test adapter."""
-    adapter = TestAdapterImpl()
+    adapter = MockAdapter()
     yield adapter
     adapter.close()
 
 
-def test_adapter_with_fixture(adapter: TestAdapterImpl) -> None:
+def test_adapter_with_fixture(adapter: MockAdapter) -> None:
     """Test adapter using fixture."""
     adapter.execute("SELECT 1")
     assert adapter.get_executed_statements() == ["SELECT 1"]
