@@ -122,13 +122,43 @@ Basic test commands:
 
 ```bash
 # Run core tests only (no database connections required)
-python run_full_tests.py --core-only
+python run_ci_tests.py --core
 
-# Run all available tests (requires database connections)
-python run_full_tests.py --all
+# Run PostgreSQL tests (requires PostgreSQL connection)
+python run_ci_tests.py --postgres
 
 # Run with test coverage reporting
-python run_full_tests.py --coverage
+python run_ci_tests.py --coverage
+```
+
+## Continuous Integration
+
+SQL Batcher uses GitHub Actions for continuous integration. The CI workflow runs automatically on all pull requests and pushes to the main branch.
+
+The CI workflow includes:
+
+1. **Linting and formatting checks**: Ensures code follows our style guidelines using black, isort, flake8, and mypy.
+2. **Core tests**: Runs tests that don't require database connections across multiple Python versions (3.8, 3.9, 3.10, 3.11).
+3. **PostgreSQL tests**: Runs tests that require a PostgreSQL database using a containerized PostgreSQL instance.
+4. **Package building**: Ensures the package can be built correctly.
+5. **Publishing**: Automatically publishes new releases to PyPI when a new version tag is pushed.
+
+You can see the CI workflow configuration in `.github/workflows/python-ci.yml`.
+
+To run the CI checks locally before submitting a pull request:
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run linting checks
+black --check src tests
+isort --check src tests
+flake8 src tests
+mypy src tests
+
+# Run tests
+python run_ci_tests.py --core --coverage
 ```
 
 ## Additional Resources

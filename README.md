@@ -4,6 +4,7 @@ SQL Batcher is a Python library designed to optimize large-scale SQL operations 
 
 [![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
+[![Python CI](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml/badge.svg)](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml)
 [![License](https://img.shields.io/github/license/yourusername/sql-batcher.svg)](https://github.com/yourusername/sql-batcher/blob/main/LICENSE)
 
 ## Key Features
