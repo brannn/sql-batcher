@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sql_batcher.retry import retry, RetryConfig
+from sql_batcher.retry import RetryConfig, retry
 
 
 class TestRetryConfig(unittest.TestCase):
@@ -149,6 +149,7 @@ class TestRetryDecorator(unittest.TestCase):
     @patch("time.sleep")
     def test_retry_with_args_and_kwargs(self, mock_sleep):
         """Test that args and kwargs are passed correctly to the function."""
+
         # Create a mock function that returns its args and kwargs
         def test_func(*args, **kwargs):
             return args, kwargs

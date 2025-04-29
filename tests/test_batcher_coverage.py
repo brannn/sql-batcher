@@ -70,6 +70,7 @@ class TestAsyncSQLBatcherCoverage(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up the test."""
         from sql_batcher.async_batcher import AsyncSQLBatcher
+
         # Create a mock adapter
         self.mock_adapter = MagicMock()
         self.batcher = AsyncSQLBatcher(adapter=self.mock_adapter)
@@ -122,6 +123,7 @@ class TestAsyncSQLBatcherCoverage(unittest.IsolatedAsyncioTestCase):
 
         # Create a query collector
         from sql_batcher.async_query_collector import AsyncQueryCollector
+
         query_collector = AsyncQueryCollector()
 
         # Process statements with the query collector

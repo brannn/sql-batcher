@@ -59,11 +59,7 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
         await adapter.connect()
 
         # Verify the pool was created with the correct parameters
-        mock_asyncpg.create_pool.assert_called_once_with(
-            dsn="postgresql://user:pass@host:5432/db",
-            min_size=1,
-            max_size=10
-        )
+        mock_asyncpg.create_pool.assert_called_once_with(dsn="postgresql://user:pass@host:5432/db", min_size=1, max_size=10)
 
     @patch("sql_batcher.adapters.async_postgresql.ASYNCPG_AVAILABLE", False)
     async def test_missing_asyncpg(self):
@@ -77,13 +73,16 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
         """Test executing a SELECT statement."""
         # Create a mock connection
         mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"},
-        ])
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                {"id": 1, "name": "Alice"},
+                {"id": 2, "name": "Bob"},
+            ]
+        )
 
         # Create a mock pool
         mock_pool = AsyncMock()
+
         # Make pool.acquire() return our mock connection
         async def mock_acquire():
             return mock_conn
@@ -123,6 +122,7 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
 
         # Create a mock pool
         mock_pool = AsyncMock()
+
         # Make pool.acquire() return our mock connection
         async def mock_acquire():
             return mock_conn
@@ -158,6 +158,7 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
 
         # Create a mock pool
         mock_pool = AsyncMock()
+
         # Make pool.acquire() return our mock connection
         async def mock_acquire():
             return mock_conn
@@ -197,6 +198,7 @@ class TestAsyncPostgreSQLAdapter(unittest.IsolatedAsyncioTestCase):
 
         # Create a mock pool
         mock_pool = AsyncMock()
+
         # Make pool.acquire() return our mock connection
         async def mock_acquire():
             return mock_conn

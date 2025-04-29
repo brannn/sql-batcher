@@ -24,13 +24,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
 
         # Verify the adapter was initialized correctly
         # The adapter doesn't expose these attributes directly, but we can verify
@@ -47,7 +41,7 @@ class TestTrinoAdapter(unittest.TestCase):
             http_scheme="http",
             verify=True,
             catalog="mock-catalog",
-            schema="mock-schema"
+            schema="mock-schema",
         )
 
     @patch("sql_batcher.adapters.trino.TRINO_AVAILABLE", False)
@@ -55,13 +49,7 @@ class TestTrinoAdapter(unittest.TestCase):
         """Test the behavior when the trino package is missing."""
         # Attempt to create an adapter without the trino package
         with self.assertRaises(ImportError):
-            TrinoAdapter(
-                host="mock-host",
-                port=8080,
-                user="mock-user",
-                catalog="mock-catalog",
-                schema="mock-schema"
-            )
+            TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
 
     @patch("sql_batcher.adapters.trino.TRINO_AVAILABLE", True)
     @patch("sql_batcher.adapters.trino.trino")
@@ -75,12 +63,7 @@ class TestTrinoAdapter(unittest.TestCase):
 
         # Create the adapter with a role
         adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema",
-            role="mock-role"
+            host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema", role="mock-role"
         )
 
         # The adapter connects automatically in __init__
@@ -94,7 +77,7 @@ class TestTrinoAdapter(unittest.TestCase):
             verify=True,
             catalog="mock-catalog",
             schema="mock-schema",
-            http_headers={"x-trino-role": "system=ROLE{mock-role}"}
+            http_headers={"x-trino-role": "system=ROLE{mock-role}"},
         )
 
     @patch("sql_batcher.adapters.trino.TRINO_AVAILABLE", True)
@@ -114,7 +97,7 @@ class TestTrinoAdapter(unittest.TestCase):
             user="mock-user",
             catalog="mock-catalog",
             schema="mock-schema",
-            http_headers={"X-Custom-Header": "value"}
+            http_headers={"X-Custom-Header": "value"},
         )
 
         # The adapter connects automatically in __init__
@@ -128,7 +111,7 @@ class TestTrinoAdapter(unittest.TestCase):
             verify=True,
             catalog="mock-catalog",
             schema="mock-schema",
-            http_headers={"X-Custom-Header": "value"}
+            http_headers={"X-Custom-Header": "value"},
         )
 
     @patch("sql_batcher.adapters.trino.TRINO_AVAILABLE", True)
@@ -152,13 +135,7 @@ class TestTrinoAdapter(unittest.TestCase):
         ]
 
         # Create the adapter (connects automatically in __init__)
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
 
         # Execute a SELECT statement
         result = adapter.execute("SELECT id, name FROM users")
@@ -186,13 +163,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter (connects automatically in __init__)
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
 
         # Execute an INSERT statement
         result = adapter.execute("INSERT INTO users (id, name) VALUES (1, 'Alice')")
@@ -214,13 +185,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Execute multiple statements
@@ -253,13 +218,7 @@ class TestTrinoAdapter(unittest.TestCase):
         ]
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Get the catalogs
@@ -292,13 +251,7 @@ class TestTrinoAdapter(unittest.TestCase):
         ]
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Get the schemas
@@ -331,13 +284,7 @@ class TestTrinoAdapter(unittest.TestCase):
         ]
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Get the tables
@@ -371,21 +318,12 @@ class TestTrinoAdapter(unittest.TestCase):
         ]
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Create a custom get_columns method for testing
         def mock_get_columns(table, catalog, schema):
-            return [
-                {"name": "id", "type": "integer", "comment": ""},
-                {"name": "name", "type": "varchar", "comment": ""}
-            ]
+            return [{"name": "id", "type": "integer", "comment": ""}, {"name": "name", "type": "varchar", "comment": ""}]
 
         # Replace the get_columns method with our mock
         adapter.get_columns = mock_get_columns
@@ -411,13 +349,7 @@ class TestTrinoAdapter(unittest.TestCase):
         mock_trino.dbapi.connect.return_value = mock_conn
 
         # Create the adapter and connect
-        adapter = TrinoAdapter(
-            host="mock-host",
-            port=8080,
-            user="mock-user",
-            catalog="mock-catalog",
-            schema="mock-schema"
-        )
+        adapter = TrinoAdapter(host="mock-host", port=8080, user="mock-user", catalog="mock-catalog", schema="mock-schema")
         # The adapter connects automatically in __init__
 
         # Close the connection

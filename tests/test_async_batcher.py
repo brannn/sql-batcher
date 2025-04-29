@@ -167,12 +167,14 @@ async def test_async_batcher_merge_inserts() -> None:
     assert len(adapter.executed_statements) == 1
 
     # Check that all values were included in the merged statement
-    assert "VALUES (1, 'one'), (2, 'two'), (3, 'three')" in adapter.executed_statements[0] or \
-           "VALUES (1, 'one'), (3, 'three'), (2, 'two')" in adapter.executed_statements[0] or \
-           "VALUES (2, 'two'), (1, 'one'), (3, 'three')" in adapter.executed_statements[0] or \
-           "VALUES (2, 'two'), (3, 'three'), (1, 'one')" in adapter.executed_statements[0] or \
-           "VALUES (3, 'three'), (1, 'one'), (2, 'two')" in adapter.executed_statements[0] or \
-           "VALUES (3, 'three'), (2, 'two'), (1, 'one')" in adapter.executed_statements[0]
+    assert (
+        "VALUES (1, 'one'), (2, 'two'), (3, 'three')" in adapter.executed_statements[0]
+        or "VALUES (1, 'one'), (3, 'three'), (2, 'two')" in adapter.executed_statements[0]
+        or "VALUES (2, 'two'), (1, 'one'), (3, 'three')" in adapter.executed_statements[0]
+        or "VALUES (2, 'two'), (3, 'three'), (1, 'one')" in adapter.executed_statements[0]
+        or "VALUES (3, 'three'), (1, 'one'), (2, 'two')" in adapter.executed_statements[0]
+        or "VALUES (3, 'three'), (2, 'two'), (1, 'one')" in adapter.executed_statements[0]
+    )
 
 
 @pytest.mark.asyncio

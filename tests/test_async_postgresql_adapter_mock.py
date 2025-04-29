@@ -82,10 +82,12 @@ class TestAsyncPostgreSQLAdapterMock(unittest.IsolatedAsyncioTestCase):
         """Test executing a SELECT statement."""
         # Create a mock connection that will be returned by pool.acquire()
         mock_conn = AsyncMock()
-        mock_conn.fetch = AsyncMock(return_value=[
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"},
-        ])
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                {"id": 1, "name": "Alice"},
+                {"id": 2, "name": "Bob"},
+            ]
+        )
 
         # Create a context manager mock that returns our mock connection
         context_manager_mock = AsyncContextManagerMock(return_value=mock_conn)
