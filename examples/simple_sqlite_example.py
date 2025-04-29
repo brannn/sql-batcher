@@ -127,7 +127,7 @@ def main():
     # Now, process with insert merging
     print("Processing WITH insert merging...")
     adapter.executed_statements = []  # Clear executed statements
-    collector.clear()  # Clear the collector
+    collector = ListQueryCollector()  # Create a new collector
 
     # Import the InsertMerger class directly
     from sql_batcher.insert_merger import InsertMerger
