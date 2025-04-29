@@ -129,10 +129,10 @@ def main():
     print(f"Collected {len(queries)} query batches")
 
     # Calculate statistics
-    total_size = sum(q["size"] for q in queries)
+    total_size = sum(len(q["query"].encode("utf-8")) for q in queries)
     avg_size = total_size / len(queries) if queries else 0
-    max_size = max(q["size"] for q in queries) if queries else 0
-    min_size = min(q["size"] for q in queries) if queries else 0
+    max_size = max(len(q["query"].encode("utf-8")) for q in queries) if queries else 0
+    min_size = min(len(q["query"].encode("utf-8")) for q in queries) if queries else 0
 
     print("Query Statistics:")
     print(f"Total size: {total_size} bytes")
@@ -176,14 +176,14 @@ def main():
         print("\nExample INSERT batch:")
         print("-" * 80)
         print(insert_queries[0]["query"][:500] + "..." if len(insert_queries[0]["query"]) > 500 else insert_queries[0]["query"])
-        print(f"Size: {insert_queries[0]['size']} bytes")
+        print(f"Size: {len(insert_queries[0]['query'].encode('utf-8'))} bytes")
         print("-" * 80)
 
     if select_queries:
         print("\nExample SELECT query:")
         print("-" * 80)
         print(select_queries[0]["query"])
-        print(f"Size: {select_queries[0]['size']} bytes")
+        print(f"Size: {len(select_queries[0]['query'].encode('utf-8'))} bytes")
         print("-" * 80)
 
     # Demonstrate adding metadata to queries
@@ -206,7 +206,7 @@ def main():
     if queries_with_metadata:
         print("-" * 80)
         print(f"Query: {queries_with_metadata[0]['query']}")
-        print(f"Size: {queries_with_metadata[0]['size']} bytes")
+        print(f"Size: {len(queries_with_metadata[0]['query'].encode('utf-8'))} bytes")
         print("Metadata:")
         for key, value in queries_with_metadata[0]["metadata"].items():
             print(f"  {key}: {value}")
