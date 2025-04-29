@@ -33,25 +33,25 @@ class SQLiteAdapter(SQLAdapter):
         """Execute a SQL statement and return results."""
         # Store the executed SQL for analysis
         self.executed_statements.append(sql)
-        
+
         cursor = self.connection.cursor()
         try:
             # Split statements if multiple are provided
             statements = [s.strip() for s in sql.split(";") if s.strip()]
             results = []
-            
+
             for statement in statements:
                 if not statement:
                     continue
-                    
+
                 cursor.execute(statement)
                 self.connection.commit()
-                
+
                 # For SELECT statements, return the results
                 if statement.strip().upper().startswith("SELECT"):
                     rows = cursor.fetchall()
                     results.extend([dict(row) for row in rows])
-            
+
             return results
         except Exception as e:
             print(f"Error executing SQL: {e}")
@@ -80,104 +80,112 @@ def main():
     print("SQL Batcher - Simple SQLite Example")
     print("===================================")
     print()
-    
+
     # Create adapter and collector
     adapter = SQLiteAdapter()
     collector = ListQueryCollector()
-    
+
     # Create the table
     adapter.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
-    
+
     # Generate statements
     num_statements = 100
     print(f"Generating {num_statements} INSERT statements...")
     statements = generate_insert_statements(num_statements)
     print()
-    
+
     # First, process without insert merging
     print("Processing WITHOUT insert merging...")
     adapter.executed_statements = []  # Clear executed statements
-    
+
     batcher = SQLBatcher(
         adapter=adapter,
-        max_bytes=100_000,
-        merge_inserts=False
+        max_bytes=100_000
+        # merge_inserts is False by default
     )
-    
+
     start_time = time.time()
     batcher.process_statements(statements, adapter.execute, collector)
     end_time = time.time()
-    
+
     time_without_merging = end_time - start_time
     ops_without_merging = len(adapter.executed_statements)
-    
+
     print(f"Execution time: {time_without_merging:.4f} seconds")
     print(f"Database operations: {ops_without_merging}")
     print()
-    
+
     # Verify the results
     result = adapter.execute("SELECT COUNT(*) as count FROM users")
     count = result[0]['count'] if result else 0
     print(f"Inserted {count} records")
     print()
-    
+
     # Clear the table
     adapter.execute("DELETE FROM users")
-    
+
     # Now, process with insert merging
     print("Processing WITH insert merging...")
     adapter.executed_statements = []  # Clear executed statements
     collector.clear()  # Clear the collector
-    
+
+    # Import the InsertMerger class directly
+    from sql_batcher.insert_merger import InsertMerger
+
     batcher = SQLBatcher(
         adapter=adapter,
-        max_bytes=100_000,
-        merge_inserts=True
+        max_bytes=100_000
     )
-    
+
+    # Create an InsertMerger instance
+    merger = InsertMerger()
+
+    # Merge the statements manually
+    merged_statements = merger.merge_insert_statements(statements)
+
     start_time = time.time()
-    batcher.process_statements(statements, adapter.execute, collector)
+    batcher.process_statements(merged_statements, adapter.execute, collector)
     end_time = time.time()
-    
+
     time_with_merging = end_time - start_time
     ops_with_merging = len(adapter.executed_statements)
-    
+
     print(f"Execution time: {time_with_merging:.4f} seconds")
     print(f"Database operations: {ops_with_merging}")
     print()
-    
+
     # Verify the results
     result = adapter.execute("SELECT COUNT(*) as count FROM users")
     count = result[0]['count'] if result else 0
     print(f"Inserted {count} records")
     print()
-    
+
     # Calculate statistics
     ops_reduction = ops_without_merging - ops_with_merging
     ops_reduction_pct = (ops_reduction / ops_without_merging) * 100 if ops_without_merging > 0 else 0
-    
+
     time_reduction = time_without_merging - time_with_merging
     time_reduction_pct = (time_reduction / time_without_merging) * 100 if time_without_merging > 0 else 0
-    
+
     print("Statistics:")
     print(f"Database operations reduced: {ops_reduction} ({ops_reduction_pct:.2f}%)")
     print(f"Execution time reduced: {time_reduction:.4f} seconds ({time_reduction_pct:.2f}%)")
     print()
-    
+
     # Show query collector information
     queries = collector.get_all()
     print(f"Collected {len(queries)} query batches")
-    
+
     if queries:
         print("\nExample merged query:")
         print("-" * 80)
         print(queries[0]["query"][:500] + "..." if len(queries[0]["query"]) > 500 else queries[0]["query"])
         print(f"Size: {queries[0]['size']} bytes")
         print("-" * 80)
-    
+
     # Close the connection
     adapter.close()
-    
+
     print("\nNote: Insert merging combines compatible INSERT statements into a single operation,")
     print("reducing the number of database calls and improving performance.")
 
