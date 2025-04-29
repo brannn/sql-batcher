@@ -1,6 +1,18 @@
 # SQL Batcher
 
-SQL Batcher is a Python library designed to optimize large-scale SQL operations by batching SQL statements, intelligently merging inserts, managing transaction size, and applying database-specific optimizations. It is particularly valuable in data engineering, ETL pipelines, and large dataset ingestion.
+## Why SQL Batcher?
+
+Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
+
+SQL Batcher addresses these pain points with a powerful value proposition:
+
+- **Performance Optimization**: Intelligently batch and merge SQL statements to reduce round-trips to the database, dramatically improving throughput for large-scale operations
+- **Memory Efficiency**: Control memory usage with configurable batch sizes and smart statement merging, preventing out-of-memory errors during massive data operations
+- **Database Adaptability**: Leverage database-specific optimizations with adapters for PostgreSQL, Trino, Snowflake, and more
+- **Transaction Management**: Simplify complex transaction handling with built-in savepoints, retries, and error recovery
+- **Developer Experience**: Write clean, maintainable code with an intuitive API that abstracts away the complexities of efficient database interactions
+
+SQL Batcher is particularly valuable in data engineering workflows, ETL pipelines, large dataset ingestion, and any scenario requiring high-performance database operations.
 
 [![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
