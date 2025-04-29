@@ -27,6 +27,9 @@ env/
 ENV/
 .env
 .venv
+bin/
+share/
+pyvenv.cfg
 
 # IDE files
 .idea/
@@ -60,3 +63,6 @@ site/
 # Logs
 *.log
 logs/
+
+# Project specific
+implementation_plan.txt
