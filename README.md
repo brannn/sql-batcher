@@ -56,6 +56,16 @@ Comprehensive async support for modern Python applications:
 - Async context managers and transaction management
 - [Learn more about Async Support →](docs/async.md)
 
+### [Context Manager](docs/context_manager.md)
+
+Clean resource management and automatic flushing of batched statements:
+
+- Automatic flushing when exiting the context
+- Proper resource cleanup and error handling
+- Support for both synchronous and asynchronous operations
+- Seamless integration with transaction management
+- [Learn more about Context Manager →](docs/context_manager.md)
+
 ### [Transaction Management](docs/transactions.md)
 
 Control transaction boundaries and ensure data consistency:
@@ -73,15 +83,6 @@ Create intermediate points within a transaction for partial rollbacks:
 - Error recovery within transactions
 - Support for complex transaction workflows
 - [Learn more about Savepoint Support →](docs/savepoints.md)
-
-### [Insert Merging](docs/insert_merging.md)
-
-Optimize database operations by combining compatible INSERT statements:
-
-- Automatic detection of compatible statements
-- Size-aware merging respecting query limits
-- Table and column structure awareness
-- [Learn more about Insert Merging →](docs/insert_merging.md)
 
 ## Installation
 
@@ -197,6 +198,7 @@ For more detailed documentation, see the following pages:
 - [Query Collector](docs/query_collector.md) - Query collection and tracking
 - [Database Adapters](docs/adapters.md) - Database-specific adapters
 - [Async Support](docs/async.md) - Async functionality
+- [Context Manager](docs/context_manager.md) - Clean resource management
 - [Transaction Management](docs/transactions.md) - Transaction control
 - [Savepoint Support](docs/savepoints.md) - Savepoint functionality
 - [Insert Merging](docs/insert_merging.md) - INSERT statement optimization
