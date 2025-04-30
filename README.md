@@ -1,5 +1,10 @@
 # SQL Batcher
 
+[![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
+[![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
+[![Python CI](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml/badge.svg)](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml)
+[![License](https://img.shields.io/github/license/brannn/sql-batcher.svg)](https://github.com/brannn/sql-batcher/blob/main/LICENSE)
+
 ## Why SQL Batcher?
 
 Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
@@ -13,11 +18,6 @@ SQL Batcher attempts to address these pain points with:
 - **Developer Experience**: Write clean, maintainable code with an intuitive API that abstracts away the complexities of efficient database interactions
 
 SQL Batcher is particularly valuable in data engineering workflows, ETL pipelines, large dataset ingestion, and any scenario requiring high-performance database operations.
-
-[![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
-[![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
-[![Python CI](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml/badge.svg)](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml)
-[![License](https://img.shields.io/github/license/yourusername/sql-batcher.svg)](https://github.com/yourusername/sql-batcher/blob/main/LICENSE)
 
 ## Key Features
 
