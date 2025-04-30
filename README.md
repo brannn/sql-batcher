@@ -7,7 +7,7 @@
 
 ## Why SQL Batcher?
 
-Managing large-scale database operations is often challenging for data engineers and developers: poor performance due to excessive round-trips, memory overflows during bulk operations, network bottlenecks, and complex transaction management to ensure consistency. SQL Batcher provides a comprehensive toolkit designed to help lessen these problems through intelligent statement batching, optimized memory usage, and database-specific optimizations.
+Large-scale database operations are often challenging for data engineers and developers: poor performance due to excessive round-trips, memory overflows during bulk operations, network bottlenecks, and complex transaction management to ensure consistency. SQL Batcher provides a comprehensive toolkit designed to help lessen these problems through intelligent statement batching, optimized memory usage, and database-specific optimizations.
 
 SQL Batcher's core components include:
 
