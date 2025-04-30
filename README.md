@@ -11,7 +11,7 @@ Data engineers and developers face significant challenges when working with larg
 
 SQL Batcher provides a comprehensive toolkit to address these pain points through its core components:
 
-- **SQL Batcher Class**: The central engine that intelligently **batches SQL statements** based on configurable size limits and database constraints
+- **SQL Batcher Class**: The central engine that intelligently **batches SQL statements** with **column-aware capabilities** based on configurable size limits and database constraints
 - **Insert Merger**: Optimizes performance by **combining compatible INSERT statements** while preserving execution order of other statements
 - **Database Adapters**: Provides **database-specific optimizations** for Trino, PostgreSQL, Snowflake, and more with a consistent interface
 - **Async Support**: Offers full **asynchronous execution** capabilities with dedicated async adapters and context managers
