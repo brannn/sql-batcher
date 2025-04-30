@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sql-batcher"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python library for batching SQL statements to optimize database operations"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
 authors = [
-    {name = "SQL Batcher Team", email = "info@example.com"}
+    {name = "SQL Batcher Team", email = "info@sqlbatcher.com"}
 ]
 requires-python = ">=3.8"
 classifiers = [
@@ -26,18 +26,13 @@ classifiers = [
 ]
 dependencies = [
     "typing-extensions>=4.0.0; python_version < '3.9'",
-    "psycopg2-binary>=2.9.10",
-    "pytest>=8.3.5",
-    "black>=24.1.0",
-    "isort>=5.13.0",
-    "flake8>=6.1.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/sql-batcher"
-Documentation = "https://github.com/yourusername/sql-batcher"
-"Bug Tracker" = "https://github.com/yourusername/sql-batcher/issues"
-"Source Code" = "https://github.com/yourusername/sql-batcher"
+Homepage = "https://github.com/brannn/sql-batcher"
+Documentation = "https://github.com/brannn/sql-batcher"
+"Bug Tracker" = "https://github.com/brannn/sql-batcher/issues"
+"Source Code" = "https://github.com/brannn/sql-batcher"
 
 [project.optional-dependencies]
 trino = ["trino>=0.310.0"]

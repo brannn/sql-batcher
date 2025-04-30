@@ -8,12 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Comprehensive test framework with support for all database adapters
-- Better support for running tests without available database connections
-- Enhanced documentation including TESTING.md with testing guidelines
+- TBD
 
 ### Changed
-- Improved test coverage for PostgreSQL adapter
+- TBD
+
+### Fixed
+- TBD
+
+## [0.1.1] - 2024-04-28
+
+### Added
+- GitHub Actions CI workflow for automated testing and publishing
+- Comprehensive test framework with support for all database adapters
+- Better support for running tests without available database connections
+- Enhanced documentation including testing guidelines
+- PyPI packaging configuration
+
+### Changed
+- Improved README with clearer value proposition
+- Updated pre-commit configuration to include flake8
+- Improved test coverage for PostgreSQL and Trino adapters
 - Consolidated testing on pytest, removing unittest style assertions
 - Better error handling in batch processing for oversized statements
 
@@ -21,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Issue with PostgreSQL COPY command and proper cursor handling
 - Test failures in PostgreSQL adapter tests when mocking the connection
 
-## [0.1.0] - 2025-04-26
+## [0.1.0] - 2024-04-26
 
 ### Added
 - Core SQLBatcher implementation with batching based on size limits
