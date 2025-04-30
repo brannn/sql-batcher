@@ -1,0 +1,124 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sql-batcher"
+version = "0.1.3"
+description = "A Python library for batching SQL statements to optimize database operations"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "SQL Batcher Team", email = "info@sqlbatcher.com"}
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "typing-extensions>=4.0.0; python_version < '3.9'",
+]
+
+[project.urls]
+Homepage = "https://github.com/brannn/sql-batcher"
+Documentation = "https://github.com/brannn/sql-batcher"
+"Bug Tracker" = "https://github.com/brannn/sql-batcher/issues"
+"Source Code" = "https://github.com/brannn/sql-batcher"
+
+[project.optional-dependencies]
+trino = ["trino>=0.310.0"]
+snowflake = ["snowflake-connector-python>=2.7.0"]
+spark = ["pyspark>=3.2.0"]
+bigquery = ["google-cloud-bigquery>=3.0.0"]
+postgresql = ["psycopg2-binary>=2.9.0"]
+all = [
+    "trino>=0.310.0",
+    "snowflake-connector-python>=2.7.0",
+    "pyspark>=3.2.0",
+    "google-cloud-bigquery>=3.0.0",
+    "psycopg2-binary>=2.9.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.3.0",
+    "isort>=5.10.0",
+    "mypy>=0.961",
+    "flake8>=4.0.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "sphinx-autodoc-typehints>=1.18.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 130
+target-version = ["py38", "py39", "py310", "py311"]
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+skip-string-normalization = false
+skip-magic-trailing-comma = false
+
+[tool.isort]
+profile = "black"
+line_length = 130
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["*/docs/*", "setup.py"]
+honor_noqa = true
+treat_comments_as_code = ["# %%"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = ["sql_batcher"]
+known_third_party = ["pytest", "psycopg2", "trino", "snowflake", "google", "asyncio", "aiohttp"]
+# allow_wildcard_imports is not supported in newer isort versions
+# Allow code, docstrings, and comments before imports
+float_to_top = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "core: Tests that don't require database connections",
+    "db: Tests that require actual database connections",
+    "postgres: Tests that require a PostgreSQL database",
+    "snowflake: Tests that require a Snowflake connection",
+    "trino: Tests that require a Trino connection",
+    "bigquery: Tests that require a BigQuery connection",
+    "spark: Tests that require a Spark connection",
+]

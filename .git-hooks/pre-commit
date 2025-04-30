@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Get the directory of the pre-commit hook
+HOOK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REPO_ROOT="$( cd "$HOOK_DIR/../.." && pwd )"
+
+# Run the format_code.sh script
+echo "Running code formatting..."
+"$REPO_ROOT/format_code.sh"
+
+# Add the formatted files to the commit
+git add -u
+
+# Exit with the status of the format_code.sh script
+exit $?
