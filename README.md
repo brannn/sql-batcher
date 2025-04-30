@@ -7,7 +7,7 @@
 
 ## Why SQL Batcher?
 
-Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
+Data engineers and developers face significant performance and complexity challenges when working with large-scale database operations.
 
 SQL Batcher provides a comprehensive toolkit to address these pain points through its core components:
 
