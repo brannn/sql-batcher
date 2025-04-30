@@ -9,13 +9,16 @@
 
 Data engineers and developers face significant challenges when working with large-scale database operations: performance bottlenecks, memory constraints, network overhead, and the complexity of managing transactions across different database systems.
 
-SQL Batcher attempts to address these pain points with:
+SQL Batcher provides a comprehensive toolkit to address these pain points through its core components:
 
-- **Performance Optimization**: Intelligently **batch and merge SQL statements** to reduce round-trips to the database, dramatically improving throughput for large-scale operations
-- **Memory Efficiency**: Control memory usage with **configurable batch sizes** and **smart statement merging**, preventing out-of-memory errors during massive data operations
-- **Database Adaptability**: Leverage **database-specific optimizations** with adapters for PostgreSQL, Trino, Snowflake, and more
-- **Transaction Management**: Simplify complex transaction handling with built-in **savepoints**, **retries**, and **error recovery**
-- **Developer Experience**: Write clean, maintainable code with an **intuitive API** that abstracts away the complexities of efficient database interactions
+- **SQL Batcher Class**: The central engine that intelligently **batches SQL statements** based on configurable size limits and database constraints
+- **Insert Merger**: Optimizes performance by **combining compatible INSERT statements** while preserving execution order of other statements
+- **Database Adapters**: Provides **database-specific optimizations** for PostgreSQL, Trino, Snowflake, and more with a consistent interface
+- **Async Support**: Offers full **asynchronous execution** capabilities with dedicated async adapters and context managers
+- **Transaction Management**: Simplifies data consistency with **transaction control** and **savepoint support** for partial rollbacks
+- **Context Managers**: Enables **clean resource management** with automatic flushing and proper cleanup in both sync and async modes
+- **Retry Facility**: Implements intelligent **error recovery** with configurable retry strategies
+- **Developer Experience**: Provides an **intuitive API** with **extensibility** options for custom adapters and configurations
 
 SQL Batcher is particularly valuable in data engineering workflows, ETL pipelines, large dataset ingestion, and any scenario requiring high-performance database operations.
 
