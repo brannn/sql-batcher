@@ -13,7 +13,7 @@ SQL Batcher provides a comprehensive toolkit to address these pain points throug
 
 - **SQL Batcher Class**: The central engine that intelligently **batches SQL statements** based on configurable size limits and database constraints
 - **Insert Merger**: Optimizes performance by **combining compatible INSERT statements** while preserving execution order of other statements
-- **Database Adapters**: Provides **database-specific optimizations** for PostgreSQL, Trino, Snowflake, and more with a consistent interface
+- **Database Adapters**: Provides **database-specific optimizations** for Trino, PostgreSQL, Snowflake, and more with a consistent interface
 - **Async Support**: Offers full **asynchronous execution** capabilities with dedicated async adapters and context managers
 - **Transaction Management**: Simplifies data consistency with **transaction control** and **savepoint support** for partial rollbacks
 - **Context Managers**: Enables **clean resource management** with automatic flushing and proper cleanup in both sync and async modes
