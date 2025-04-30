@@ -7,7 +7,7 @@ name = "sql-batcher"
 version = "0.1.1"
 description = "A Python library for batching SQL statements to optimize database operations"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "SQL Batcher Team", email = "info@sqlbatcher.com"}
 ]
@@ -15,7 +15,6 @@ requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
