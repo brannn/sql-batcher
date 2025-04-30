@@ -11,11 +11,11 @@ Data engineers and developers face significant challenges when working with larg
 
 SQL Batcher attempts to address these pain points with:
 
-- **Performance Optimization**: Intelligently batch and merge SQL statements to reduce round-trips to the database, dramatically improving throughput for large-scale operations
-- **Memory Efficiency**: Control memory usage with configurable batch sizes and smart statement merging, preventing out-of-memory errors during massive data operations
-- **Database Adaptability**: Leverage database-specific optimizations with adapters for PostgreSQL, Trino, Snowflake, and more
-- **Transaction Management**: Simplify complex transaction handling with built-in savepoints, retries, and error recovery
-- **Developer Experience**: Write clean, maintainable code with an intuitive API that abstracts away the complexities of efficient database interactions
+- **Performance Optimization**: Intelligently **batch and merge SQL statements** to reduce round-trips to the database, dramatically improving throughput for large-scale operations
+- **Memory Efficiency**: Control memory usage with **configurable batch sizes** and **smart statement merging**, preventing out-of-memory errors during massive data operations
+- **Database Adaptability**: Leverage **database-specific optimizations** with adapters for PostgreSQL, Trino, Snowflake, and more
+- **Transaction Management**: Simplify complex transaction handling with built-in **savepoints**, **retries**, and **error recovery**
+- **Developer Experience**: Write clean, maintainable code with an **intuitive API** that abstracts away the complexities of efficient database interactions
 
 SQL Batcher is particularly valuable in data engineering workflows, ETL pipelines, large dataset ingestion, and any scenario requiring high-performance database operations.
 
@@ -27,74 +27,74 @@ SQL Batcher provides a comprehensive set of features for efficient SQL statement
 
 Efficiently batch SQL statements based on size limits and other constraints. The core component that handles:
 
-- Smart batching based on database-specific size limits
-- Dynamic batch size adjustment based on column count
-- Memory and network optimization
+- **Smart batching** based on database-specific size limits
+- **Dynamic batch size adjustment** based on column count
+- **Memory and network optimization**
 - [Learn more about SQL Batcher →](docs/batcher.md)
 
 ### [Query Collector](docs/query_collector.md)
 
 Collect and track SQL queries for debugging, logging, and monitoring:
 
-- Query collection with metadata support
-- Size tracking and batch management
-- Column count detection for INSERT statements
+- **Query collection** with metadata support
+- **Size tracking** and batch management
+- **Column count detection** for INSERT statements
 - [Learn more about Query Collector →](docs/query_collector.md)
 
 ### [Insert Merging](docs/insert_merging.md)
 
 Optimize database operations by combining compatible INSERT statements:
 
-- Automatic detection of compatible statements
-- Size-aware merging respecting query limits
-- Table and column structure awareness
-- Preserves execution order of non-INSERT statements
+- **Automatic detection** of compatible statements
+- **Size-aware merging** respecting query limits
+- **Table and column structure awareness**
+- **Preserves execution order** of non-INSERT statements
 - [Learn more about Insert Merging →](docs/insert_merging.md)
 
 ### [Database Adapters](docs/adapters.md)
 
 Optimized adapters for popular databases:
 
-- Database-specific optimizations
-- Consistent interface across databases
-- Connection and resource management
+- **Database-specific optimizations**
+- **Consistent interface** across databases
+- **Connection and resource management**
 - [Learn more about Database Adapters →](docs/adapters.md)
 
 ### [Async Support](docs/async.md)
 
 Comprehensive async support for modern Python applications:
 
-- Async batching and execution
-- Async adapters for all supported databases
-- Async context managers and transaction management
+- **Async batching and execution**
+- **Async adapters** for all supported databases
+- **Async context managers** and transaction management
 - [Learn more about Async Support →](docs/async.md)
 
 ### [Context Manager](docs/context_manager.md)
 
 Clean resource management and automatic flushing of batched statements:
 
-- Automatic flushing when exiting the context
-- Proper resource cleanup and error handling
-- Support for both synchronous and asynchronous operations
-- Seamless integration with transaction management
+- **Automatic flushing** when exiting the context
+- **Proper resource cleanup** and error handling
+- **Support for both synchronous and asynchronous operations**
+- **Seamless integration** with transaction management
 - [Learn more about Context Manager →](docs/context_manager.md)
 
 ### [Transaction Management](docs/transactions.md)
 
 Control transaction boundaries and ensure data consistency:
 
-- Begin, commit, and rollback transactions
-- Error handling and recovery
-- Integration with context managers
+- **Begin, commit, and rollback transactions**
+- **Error handling and recovery**
+- **Integration with context managers**
 - [Learn more about Transaction Management →](docs/transactions.md)
 
 ### [Savepoint Support](docs/savepoints.md)
 
 Create intermediate points within a transaction for partial rollbacks:
 
-- Create, rollback to, and release savepoints
-- Error recovery within transactions
-- Support for complex transaction workflows
+- **Create, rollback to, and release savepoints**
+- **Error recovery** within transactions
+- **Support for complex transaction workflows**
 - [Learn more about Savepoint Support →](docs/savepoints.md)
 
 ## Installation
