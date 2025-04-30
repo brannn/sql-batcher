@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
+## [0.1.3] - 2024-04-30
+
+### Changed
+- Separated CI and publishing workflows
+
+### Fixed
+- Configured trusted publishing for PyPI
+
 ## [0.1.2] - 2024-04-30
 
 ### Fixed
