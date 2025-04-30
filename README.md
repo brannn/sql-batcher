@@ -1,6 +1,6 @@
 # SQL Batcher
 
-[![PyPI version](https://badge.fury.io/py/sql-batcher.svg)](https://badge.fury.io/py/sql-batcher)
+[![PyPI version](https://img.shields.io/pypi/v/sql-batcher?color=blue)](https://pypi.org/project/sql-batcher/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sql-batcher.svg)](https://pypi.org/project/sql-batcher/)
 [![Python CI](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml/badge.svg)](https://github.com/brannn/sql-batcher/actions/workflows/python-ci.yml)
 [![License](https://img.shields.io/github/license/brannn/sql-batcher.svg)](https://github.com/brannn/sql-batcher/blob/main/LICENSE)
