@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - TBD
 
+## [0.1.4] - 2024-04-29
+
+### Changed
+- Reorganized repository structure for a cleaner root directory
+- Moved script files to scripts/ directory
+- Moved configuration files to config/ directory
+- Moved documentation files to docs/ directory
+- Added README files to scripts/ and config/ directories
+
 ## [0.1.3] - 2024-04-30
 
 ### Changed

@@ -24,7 +24,7 @@ Examples:
 from sql_batcher.async_batcher import AsyncSQLBatcher
 from sql_batcher.batcher import SQLBatcher
 
-__version__ = "0.1.0"
+__version__ = "0.1.4"
 
 
 __all__ = ["SQLBatcher", "AsyncSQLBatcher"]
